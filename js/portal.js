@@ -121,15 +121,72 @@ const CAT_BADGE = {
   achievements: 'badge-achievements', facilities: 'badge-facilities', community: 'badge-community'
 };
 
-/* Section 4 - API Stubs */
+/* Section 4 - API */
 const API_BASE = 'https://dgps-website.onrender.com';
 
-function apiUploadBlogPost(formData) { console.log('[stub]', API_BASE, 'upload blog', formData); return Promise.resolve({ success: true, id: Date.now() }); }
-function apiUploadGalleryPhoto(formData) { console.log('[stub]', API_BASE, 'upload gallery', formData); return Promise.resolve({ success: true, id: Date.now() }); }
-function apiGetBlogPosts() { console.log('[stub]', API_BASE, 'get blog posts'); return Promise.resolve({ data: blogPosts }); }
-function apiGetGalleryPhotos() { console.log('[stub]', API_BASE, 'get gallery photos'); return Promise.resolve({ data: galleryPhotos }); }
-function apiDeleteBlogPost(id) { console.log('[stub]', API_BASE, 'delete blog', id); return Promise.resolve({ success: true }); }
-function apiDeleteGalleryPhoto(id) { console.log('[stub]', API_BASE, 'delete gallery', id); return Promise.resolve({ success: true }); }
+function wakeBackend() {
+  fetch(API_BASE + '/api/media/posts/', { method: 'HEAD' }).catch(() => {});
+}
+
+async function apiGetBlogPosts() {
+  const res = await fetch(API_BASE + '/api/media/posts/', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch blog posts');
+  return res.json();
+}
+
+async function apiGetGalleryPhotos() {
+  const res = await fetch(API_BASE + '/api/media/gallery/', {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' },
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch gallery photos');
+  return res.json();
+}
+
+async function apiUploadBlogPost(formData) {
+  const res = await fetch(API_BASE + '/api/media/posts/', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Upload failed');
+  }
+  return res.json();
+}
+
+async function apiUploadGalleryPhoto(formData) {
+  const res = await fetch(API_BASE + '/api/media/gallery/', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Upload failed');
+  }
+  return res.json();
+}
+
+async function apiDeleteBlogPost(id) {
+  const res = await fetch(API_BASE + '/api/media/posts/' + id + '/', {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Delete failed');
+  return res.json();
+}
+
+async function apiDeleteGalleryPhoto(id) {
+  const res = await fetch(API_BASE + '/api/media/gallery/' + id + '/', {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Delete failed');
+  return res.json();
+}
 
 /* Section 5 - Blog Upload */
 function updateBlogPreview() {
@@ -172,41 +229,55 @@ function handleBlogDrop(e) {
   }
 }
 
-function submitBlogPost() {
-  const title = valueOf('blog-title');
-  const category = valueOf('blog-category');
-  const type = valueOf('blog-media-type');
-  const caption = valueOf('blog-caption');
+async function submitBlogPost() {
+  const title = document.getElementById('blog-title').value.trim();
+  const category = document.getElementById('blog-category').value;
+  const caption = document.getElementById('blog-caption').value.trim();
+  const mediaType = document.getElementById('blog-media-type').value;
+  const isPublished = document.getElementById('blog-publish').checked;
+  const isFeatured = document.getElementById('blog-featured').checked;
+  const fileInput = document.getElementById('blog-file');
+  const file = fileInput.files[0];
+
   if (!title || !category || !caption) {
-    showToast('Title, category, and caption are required.', 'error');
+    showToast('Please fill in all required fields', 'error');
     return;
   }
-  if (!selectedBlogFile || !type) {
-    showToast('Select a media file and media type.', 'error');
-    return;
-  }
+
   const formData = new FormData();
   formData.append('title', title);
-  formData.append('category', category);
-  formData.append('type', type);
   formData.append('caption', caption);
-  formData.append('publish', document.getElementById('blog-publish').checked);
-  formData.append('featured', document.getElementById('blog-featured').checked);
-  formData.append('file', selectedBlogFile);
-  apiUploadBlogPost(formData).then(() => {
+  formData.append('category', category);
+  formData.append('media_type', mediaType);
+  formData.append('is_published', isPublished ? 'true' : 'false');
+  formData.append('is_featured', isFeatured ? 'true' : 'false');
+  if (file) formData.append('media_file', file);
+
+  simulateProgress('blog');
+
+  try {
+    const result = await apiUploadBlogPost(formData);
+    const p = result.data;
     blogPosts.unshift({
-      id: Date.now(),
-      title,
-      cat: category,
-      type,
-      status: document.getElementById('blog-publish').checked ? 'published' : 'draft',
-      featured: document.getElementById('blog-featured').checked,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      id: p.id,
+      title: p.title,
+      cat: p.category,
+      type: p.media_type,
+      status: p.is_published ? 'published' : 'draft',
+      featured: p.is_featured,
+      date: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      media_url: p.media_url,
     });
-    updateCounts();
+    document.getElementById('blog-badge').textContent = blogPosts.length;
+    renderBlogTable(blogPosts);
+    updateDashboardStats();
+    if (activePage === 'dashboard') renderDashboard();
+    if (activePage === 'media-library') renderLibraryGrid();
+    showToast('Post uploaded successfully!', 'success');
     clearBlogForm();
-    showToast('Blog post uploaded successfully.', 'success');
-  });
+  } catch (e) {
+    showToast(e.message || 'Upload failed. Try again.', 'error');
+  }
 }
 
 function clearBlogForm() {
@@ -265,33 +336,61 @@ function handleGalDrop(e) {
   }
 }
 
-function submitGallery() {
-  const caption = valueOf('gal-caption');
-  const category = valueOf('gal-category');
-  const layout = valueOf('gal-layout');
-  if (!caption || !category || !selectedGalleryFiles.length) {
-    showToast('Caption, category, and at least one file are required.', 'error');
+async function submitGallery() {
+  const caption = document.getElementById('gal-caption').value.trim();
+  const category = document.getElementById('gal-category').value;
+  const layout = document.getElementById('gal-layout').value;
+  const isPublished = document.getElementById('gal-publish').checked;
+  const fileInput = document.getElementById('gal-file');
+  const files = Array.from(fileInput.files);
+
+  if (!caption || !category) {
+    showToast('Please add a caption and select a category', 'error');
     return;
   }
-  const formData = new FormData();
-  formData.append('caption', caption);
-  formData.append('category', category);
-  formData.append('layout', layout);
-  selectedGalleryFiles.forEach((file) => formData.append('files', file));
-  apiUploadGalleryPhoto(formData).then(() => {
-    selectedGalleryFiles.forEach((_, index) => {
+  if (!files.length) {
+    showToast('Please select at least one photo', 'error');
+    return;
+  }
+
+  simulateProgress('gal');
+
+  let successCount = 0;
+  for (const file of files) {
+    const formData = new FormData();
+    formData.append('caption', caption);
+    formData.append('category', category);
+    formData.append('layout', layout);
+    formData.append('alt_text', caption);
+    formData.append('is_published', isPublished ? 'true' : 'false');
+    formData.append('media_file', file);
+
+    try {
+      const result = await apiUploadGalleryPhoto(formData);
+      const p = result.data;
       galleryPhotos.unshift({
-        id: Date.now() + index,
-        caption,
-        cat: category,
-        layout,
-        date: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        id: p.id,
+        caption: p.caption,
+        cat: p.category,
+        layout: p.layout || '',
+        date: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        media_url: p.media_url,
       });
-    });
-    updateCounts();
+      successCount++;
+    } catch (e) {
+      showToast(`Failed to upload ${file.name}: ${e.message}`, 'error');
+    }
+  }
+
+  if (successCount > 0) {
+    document.getElementById('gallery-badge').textContent = galleryPhotos.length;
+    updateDashboardStats();
+    if (activePage === 'gallery-manage') renderGalleryGrid(currentGalleryFilter, document.getElementById('gallery-search').value);
+    if (activePage === 'dashboard') renderDashboard();
+    if (activePage === 'media-library') renderLibraryGrid();
+    showToast(`${successCount} photo${successCount > 1 ? 's' : ''} added to gallery!`, 'success');
     clearGalForm();
-    showToast('Gallery upload complete.', 'success');
-  });
+  }
 }
 
 function clearGalForm() {
@@ -335,13 +434,21 @@ function filterBlog(cat, btn) {
   renderBlogTable();
 }
 
-function deletePost(id) {
-  const index = blogPosts.findIndex((post) => post.id === id);
-  if (index > -1) {
-    blogPosts.splice(index, 1);
-    updateCounts();
-    renderBlogTable();
-    showToast('Post deleted.', 'success');
+async function deletePost(id) {
+  try {
+    await apiDeleteBlogPost(id);
+    const idx = blogPosts.findIndex((p) => p.id === id);
+    if (idx > -1) blogPosts.splice(idx, 1);
+    renderBlogTable(
+      !currentBlogFilter || currentBlogFilter === 'all' ? blogPosts : blogPosts.filter((p) => p.cat === currentBlogFilter)
+    );
+    document.getElementById('blog-badge').textContent = blogPosts.length;
+    updateDashboardStats();
+    if (activePage === 'dashboard') renderDashboard();
+    if (activePage === 'media-library') renderLibraryGrid();
+    showToast('Post deleted', 'success');
+  } catch (e) {
+    showToast('Could not delete post. Try again.', 'error');
   }
 }
 
@@ -357,7 +464,7 @@ function renderGalleryGrid(filter = null, query = '') {
   }
   container.innerHTML = items.map((photo) => `
     <article class="media-thumb ${photo.layout ? `layout-${photo.layout}` : ''}">
-      <div class="thumb-frame"><i class="fas fa-image"></i><div class="thumb-actions"><button class="btn btn-secondary btn-sm" onclick="showToast('Edit flow is a UI stub for now.', 'info')"><i class="fas fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="deleteGalleryPhoto(${photo.id})"><i class="fas fa-trash"></i></button></div></div>
+      <div class="thumb-frame">${photo.media_url ? `<img src="${photo.media_url}" alt="${photo.caption}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="fas fa-image" style="font-size:2rem"></i>`}<div class="thumb-actions"><button class="btn btn-secondary btn-sm" onclick="showToast('Edit flow is a UI stub for now.', 'info')"><i class="fas fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="deleteGalleryPhoto(${photo.id})"><i class="fas fa-trash"></i></button></div></div>
       <div class="thumb-body"><h4>${photo.caption}</h4><div class="thumb-meta"><span class="badge ${CAT_BADGE[photo.cat]}">${CAT_LABELS[photo.cat]}</span><span>${photo.date}</span></div></div>
     </article>
   `).join('');
@@ -369,26 +476,32 @@ function filterGallery(cat, btn) {
   renderGalleryGrid(cat, document.getElementById('gallery-search').value);
 }
 
-function deleteGalleryPhoto(id) {
-  const index = galleryPhotos.findIndex((photo) => photo.id === id);
-  if (index > -1) {
-    galleryPhotos.splice(index, 1);
-    updateCounts();
+async function deleteGalleryPhoto(id) {
+  try {
+    await apiDeleteGalleryPhoto(id);
+    const idx = galleryPhotos.findIndex((p) => p.id === id);
+    if (idx > -1) galleryPhotos.splice(idx, 1);
     renderGalleryGrid(currentGalleryFilter, document.getElementById('gallery-search').value);
-    showToast('Gallery photo deleted.', 'success');
+    document.getElementById('gallery-badge').textContent = galleryPhotos.length;
+    updateDashboardStats();
+    if (activePage === 'dashboard') renderDashboard();
+    if (activePage === 'media-library') renderLibraryGrid();
+    showToast('Photo removed from gallery', 'success');
+  } catch (e) {
+    showToast('Could not delete photo. Try again.', 'error');
   }
 }
 
 /* Section 9 - Media Library */
 function renderLibraryGrid() {
   const libraryItems = [
-    ...blogPosts.filter((post) => post.type === 'image').map((post) => ({ kind: 'blog', title: post.title, cat: post.cat, date: post.date })),
-    ...galleryPhotos.slice(0, 8).map((photo) => ({ kind: 'gallery', title: photo.caption, cat: photo.cat, date: photo.date }))
+    ...blogPosts.filter((post) => post.type === 'image').map((post) => ({ kind: 'blog', title: post.title, cat: post.cat, date: post.date, media_url: post.media_url })),
+    ...galleryPhotos.slice(0, 8).map((photo) => ({ kind: 'gallery', title: photo.caption, cat: photo.cat, date: photo.date, media_url: photo.media_url }))
   ];
   const grid = document.getElementById('lib-grid');
   grid.innerHTML = libraryItems.map((item) => `
     <article class="media-thumb">
-      <div class="thumb-frame"><i class="fas fa-image"></i><div class="thumb-actions"><button class="btn btn-danger btn-sm" onclick="showToast('Delete action will be wired with backend later.', 'info')"><i class="fas fa-trash"></i></button></div></div>
+      <div class="thumb-frame">${item.media_url ? `<img src="${item.media_url}" alt="${item.title}" style="width:100%;height:100%;object-fit:cover;">` : `<i class="fas fa-image" style="font-size:2rem"></i>`}<div class="thumb-actions"><button class="btn btn-danger btn-sm" onclick="showToast('Delete action will be wired with backend later.', 'info')"><i class="fas fa-trash"></i></button></div></div>
       <div class="thumb-body"><h4>${item.title}</h4><div class="thumb-meta"><span class="badge ${CAT_BADGE[item.cat]}">${CAT_LABELS[item.cat]}</span><span>${item.date}</span></div></div>
     </article>
   `).join('');
@@ -434,20 +547,79 @@ function showToast(msg, type = 'info') {
 }
 
 function initApp() {
-  renderBlogTable(blogPosts);
-  renderGalleryGrid();
-  renderLibraryGrid();
-  renderDashboard();
+  wakeBackend();
   updateBlogPreview();
   updateGalPreview();
-  updateCounts();
-  showPage(activePage);
+  loadBlogPosts();
+  loadGalleryPhotos();
+}
+
+async function loadBlogPosts() {
+  try {
+    const result = await apiGetBlogPosts();
+    const posts = Array.isArray(result.data) ? result.data : [];
+    posts.forEach((p) => {
+      if (!blogPosts.find((b) => b.id === p.id)) {
+        blogPosts.unshift({
+          id: p.id,
+          title: p.title,
+          cat: p.category,
+          type: p.media_type,
+          status: p.is_published ? 'published' : 'draft',
+          featured: p.is_featured,
+          date: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          media_url: p.media_url,
+        });
+      }
+    });
+    document.getElementById('blog-badge').textContent = blogPosts.length;
+    renderBlogTable(blogPosts);
+    renderLibraryGrid();
+    updateDashboardStats();
+    if (activePage === 'dashboard') renderDashboard();
+  } catch (e) {
+    console.error('loadBlogPosts error:', e);
+  }
+}
+
+async function loadGalleryPhotos() {
+  try {
+    const result = await apiGetGalleryPhotos();
+    const photos = Array.isArray(result.data) ? result.data : [];
+    photos.forEach((p) => {
+      if (!galleryPhotos.find((g) => g.id === p.id)) {
+        galleryPhotos.unshift({
+          id: p.id,
+          caption: p.caption,
+          cat: p.category,
+          layout: p.layout || '',
+          date: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+          media_url: p.media_url,
+        });
+      }
+    });
+    document.getElementById('gallery-badge').textContent = galleryPhotos.length;
+    renderLibraryGrid();
+    updateDashboardStats();
+    if (activePage === 'dashboard') renderDashboard();
+  } catch (e) {
+    console.error('loadGalleryPhotos error:', e);
+  }
 }
 
 function triggerFileInput(id) { document.getElementById(id).click(); }
 function setDropState(id, state) { document.getElementById(id).classList.toggle('drag-over', state); }
 function valueOf(id) { return document.getElementById(id).value.trim(); }
 function capitalize(value) { return value ? value.charAt(0).toUpperCase() + value.slice(1) : ''; }
+
+function updateDashboardStats() {
+  const blogTotal = document.querySelector('#page-dashboard .stat-num:nth-of-type(1)') || document.getElementById('stat-blog-count');
+  const galTotal = document.querySelector('#page-dashboard .stat-num:nth-of-type(2)') || document.getElementById('stat-gallery-count');
+  const featuredTotal = document.querySelector('#page-dashboard .stat-num:nth-of-type(4)') || document.getElementById('stat-featured-count');
+  if (blogTotal) blogTotal.textContent = blogPosts.length;
+  if (galTotal) galTotal.textContent = galleryPhotos.length;
+  if (featuredTotal) featuredTotal.textContent = blogPosts.filter((p) => p.featured).length;
+}
 
 function updateCounts() {
   document.getElementById('blog-badge').textContent = blogPosts.length;
