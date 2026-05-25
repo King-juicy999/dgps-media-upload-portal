@@ -82,17 +82,7 @@ function showPage(id) {
 }
 
 /* Section 3 - Mock Data */
-const blogPosts = [
-  { id: 1, title: 'Inter-House Sports 2026 — Highlights', cat: 'sports', type: 'video', status: 'published', featured: true, date: 'Apr 11 2026' },
-  { id: 2, title: 'Green House Erupts — High Jump Champions', cat: 'sports', type: 'image', status: 'published', featured: false, date: 'Apr 11 2026' },
-  { id: 3, title: 'High Jump — Inter-House Sports 2026 Day 1', cat: 'sports', type: 'image', status: 'published', featured: false, date: 'Apr 11 2026' },
-  { id: 4, title: 'High Jump — Clearing the Bar', cat: 'sports', type: 'image', status: 'published', featured: false, date: 'Apr 11 2026' },
-  { id: 5, title: 'High Jump — Eyes on the Bar', cat: 'sports', type: 'image', status: 'published', featured: false, date: 'Apr 11 2026' },
-  { id: 6, title: 'Sports Training Vlog Episode 1', cat: 'sports', type: 'video', status: 'draft', featured: false, date: 'Apr 8 2026' },
-  { id: 7, title: 'Student Presentation Activity', cat: 'academics', type: 'image', status: 'published', featured: false, date: 'Mar 20 2026' },
-  { id: 8, title: 'Student Life Mixed Media Story', cat: 'student-life', type: 'video', status: 'draft', featured: false, date: 'Mar 15 2026' },
-  { id: 9, title: 'Academic Excellence Feature', cat: 'academics', type: 'image', status: 'draft', featured: false, date: 'Mar 10 2026' }
-];
+const blogPosts = [];
 
 const galleryPhotos = [
   { id: 1, caption: 'Diadematics 2024 — Opening', cat: 'events', layout: 'wide', date: 'Nov 2024' },
@@ -558,19 +548,19 @@ async function loadBlogPosts() {
   try {
     const result = await apiGetBlogPosts();
     const posts = Array.isArray(result.data) ? result.data : [];
+    // Replace mock array entirely with live data
+    blogPosts.length = 0;
     posts.forEach((p) => {
-      if (!blogPosts.find((b) => b.id === p.id)) {
-        blogPosts.unshift({
-          id: p.id,
-          title: p.title,
-          cat: p.category,
-          type: p.media_type,
-          status: p.is_published ? 'published' : 'draft',
-          featured: p.is_featured,
-          date: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-          media_url: p.media_url,
-        });
-      }
+      blogPosts.push({
+        id: p.id,
+        title: p.title,
+        cat: p.category,
+        type: p.media_type,
+        status: p.is_published ? 'published' : 'draft',
+        featured: p.is_featured,
+        date: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        media_url: p.media_url,
+      });
     });
     document.getElementById('blog-badge').textContent = blogPosts.length;
     renderBlogTable(blogPosts);
