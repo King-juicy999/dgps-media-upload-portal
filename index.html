@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DGPS Media Upload Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/portal.css">
+</head>
+<body>
+  <div id="login-screen">
+    <div class="login-shell">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-logo"><i class="fas fa-cloud-upload-alt"></i></div>
+          <p class="eyebrow">DGPS Admin</p>
+          <h1 class="login-title">Media Upload Portal</h1>
+          <p class="login-subtitle">Upload and manage content for blog and gallery pages.</p>
+        </div>
+        <div class="login-form">
+          <div class="form-group">
+            <label for="username" class="required">Username</label>
+            <input type="text" id="username" onkeydown="handleUsernameKey(event)">
+          </div>
+          <div class="form-group">
+            <label for="password" class="required">Password</label>
+            <input type="password" id="password" onkeydown="handlePasswordKey(event)">
+          </div>
+          <button class="btn btn-primary btn-block" type="button" onclick="login()"><i class="fas fa-right-to-bracket"></i> Login</button>
+          <p class="demo-note">Demo credentials: <strong>admin</strong> / <strong>dgps2026</strong></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="app-layout">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="brand-mark"><i class="fas fa-photo-film"></i></div>
+          <div>
+            <p class="brand-kicker">Diadem Golden Pearl</p>
+            <h2>Media Portal</h2>
+          </div>
+        </div>
+
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')"><i class="fas fa-chart-line"></i><span>Dashboard</span></button>
+          <button class="nav-item" data-page="blog-upload" onclick="showPage('blog-upload')"><i class="fas fa-pen-to-square"></i><span>Blog Upload</span></button>
+          <button class="nav-item" data-page="blog-manage" onclick="showPage('blog-manage')"><i class="fas fa-table-list"></i><span>Blog Manage</span><span class="nav-badge" id="blog-badge">0</span></button>
+          <button class="nav-item" data-page="gallery-upload" onclick="showPage('gallery-upload')"><i class="fas fa-images"></i><span>Gallery Upload</span></button>
+          <button class="nav-item" data-page="gallery-manage" onclick="showPage('gallery-manage')"><i class="fas fa-grip"></i><span>Gallery Manage</span><span class="nav-badge" id="gallery-badge">0</span></button>
+          <button class="nav-item" data-page="media-library" onclick="showPage('media-library')"><i class="fas fa-photo-film"></i><span>Media Library</span></button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-chip">
+            <div class="user-avatar">A</div>
+            <div>
+              <p class="user-name">Admin User</p>
+              <p class="user-role">Portal Manager</p>
+            </div>
+          </div>
+          <button class="btn btn-ghost btn-block" type="button" onclick="logout()"><i class="fas fa-arrow-right-from-bracket"></i> Logout</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1 id="topbar-title">Dashboard</h1>
+            <p id="topbar-sub">Overview of your media content</p>
+          </div>
+        </header>
+
+        <div class="page-wrap">
+          <div class="page" id="page-dashboard">
+            <section class="stats-row">
+              <article class="stat-card">
+                <div class="stat-head"><span>Total Blog Posts</span><i class="fas fa-newspaper"></i></div>
+                <div class="stat-value" id="stat-blog-count">0</div>
+                <p class="stat-meta"><span id="stat-blog-published">0</span> published entries</p>
+              </article>
+              <article class="stat-card">
+                <div class="stat-head"><span>Total Gallery Photos</span><i class="fas fa-image"></i></div>
+                <div class="stat-value" id="stat-gallery-count">0</div>
+                <p class="stat-meta"><span id="stat-gallery-total">0</span> media items available</p>
+              </article>
+              <article class="stat-card">
+                <div class="stat-head"><span>Featured Posts</span><i class="fas fa-star"></i></div>
+                <div class="stat-value" id="stat-featured-count">0</div>
+                <p class="stat-meta">Stories highlighted on blog.html</p>
+              </article>
+              <article class="stat-card">
+                <div class="stat-head"><span>Draft Content</span><i class="fas fa-file-pen"></i></div>
+                <div class="stat-value" id="stat-draft-count">0</div>
+                <p class="stat-meta">Awaiting publication</p>
+              </article>
+            </section>
+
+            <section class="quick-actions card">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Quick Actions</p>
+                  <h3>Jump into common tasks</h3>
+                </div>
+              </div>
+              <div class="quick-actions-grid">
+                <button class="quick-action" onclick="showPage('blog-upload')"><i class="fas fa-upload"></i><span>Upload Blog Post</span></button>
+                <button class="quick-action" onclick="showPage('blog-manage')"><i class="fas fa-list-check"></i><span>Manage Blog Posts</span></button>
+                <button class="quick-action" onclick="showPage('gallery-upload')"><i class="fas fa-cloud-arrow-up"></i><span>Upload Gallery Photos</span></button>
+                <button class="quick-action" onclick="showPage('media-library')"><i class="fas fa-photo-film"></i><span>Open Media Library</span></button>
+              </div>
+            </section>
+
+            <section class="dashboard-lower">
+              <article class="card activity-card">
+                <div class="section-heading">
+                  <div>
+                    <p class="eyebrow">Recent Activity</p>
+                    <h3>Latest media updates</h3>
+                  </div>
+                </div>
+                <div class="activity-feed" id="activity-feed"></div>
+              </article>
+              <article class="dashboard-side">
+                <div class="card breakdown-card">
+                  <p class="eyebrow">Content Breakdown</p>
+                  <h3>Blog Categories</h3>
+                  <div class="breakdown-list" id="blog-breakdown"></div>
+                </div>
+                <div class="card breakdown-card">
+                  <p class="eyebrow">Gallery Breakdown</p>
+                  <h3>Gallery Categories</h3>
+                  <div class="breakdown-list" id="gallery-breakdown"></div>
+                </div>
+              </article>
+            </section>
+          </div>
+
+          <div class="page" id="page-blog-upload">
+            <div class="upload-layout">
+              <div class="stack">
+                <section class="card">
+                  <div class="section-heading"><h3>Post Details</h3></div>
+                  <div class="form-group">
+                    <label for="blog-title" class="required">Post Title</label>
+                    <input type="text" id="blog-title" oninput="updateBlogPreview()">
+                  </div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="blog-category" class="required">Category</label>
+                      <select id="blog-category" oninput="updateBlogPreview()">
+                        <option value="">Select Category</option>
+                        <option value="sports">Sports</option>
+                        <option value="events">Events</option>
+                        <option value="academics">Academics</option>
+                        <option value="student-life">Student Life</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="blog-media-type" class="required">Media Type</label>
+                      <select id="blog-media-type" oninput="updateBlogPreview()">
+                        <option value="">Select Type</option>
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="blog-caption" class="required">Caption / Description</label>
+                    <textarea id="blog-caption" oninput="updateBlogPreview()"></textarea>
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="section-heading"><h3>Upload Media</h3></div>
+                  <div class="dropzone" id="blog-dropzone" onclick="triggerFileInput('blog-file')" ondragover="event.preventDefault(); setDropState('blog-dropzone', true)" ondragleave="setDropState('blog-dropzone', false)" ondrop="handleBlogDrop(event)">
+                    <input type="file" id="blog-file" class="file-input" accept="image/*,video/*" onchange="handleBlogFile(this)">
+                    <i class="fas fa-cloud-arrow-up"></i>
+                    <p>Drag and drop your media here</p>
+                    <span>Or click to browse from your device</span>
+                  </div>
+                  <div class="progress-shell" id="blog-progress">
+                    <div class="progress-track"><div class="progress-bar" id="blog-pbar"></div></div>
+                    <span id="blog-pct">0%</span>
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="section-heading"><h3>Publishing Settings</h3></div>
+                  <div class="toggle-row">
+                    <div>
+                      <h4>Publish Immediately</h4>
+                      <p>Push this post live once uploaded.</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="blog-publish" checked onchange="updateBlogPreview()"><span></span></label>
+                  </div>
+                  <div class="toggle-row">
+                    <div>
+                      <h4>Featured Post</h4>
+                      <p>Highlight this story at the top of the blog.</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="blog-featured" onchange="updateBlogPreview()"><span></span></label>
+                  </div>
+                  <div class="form-actions">
+                    <button class="btn btn-secondary" type="button" onclick="clearBlogForm()">Clear</button>
+                    <button class="btn btn-primary" type="button" onclick="submitBlogPost()"><i class="fas fa-upload"></i> Upload Blog Post</button>
+                  </div>
+                </section>
+              </div>
+
+              <aside class="preview-card">
+                <div class="section-heading"><h3>Live Preview</h3><span class="status-pill" id="preview-status">Draft</span></div>
+                <div class="preview-thumb" id="preview-thumb"><i class="fas fa-image"></i></div>
+                <div class="preview-meta">
+                  <div><span>Title</span><strong id="pv-title">Untitled blog post</strong></div>
+                  <div><span>Category</span><strong id="pv-cat">Unassigned</strong></div>
+                  <div><span>Media Type</span><strong id="pv-type">Not selected</strong></div>
+                  <div><span>Caption</span><strong id="pv-caption">No caption added yet.</strong></div>
+                  <div><span>Status</span><strong id="pv-status">Draft</strong></div>
+                </div>
+              </aside>
+            </div>
+          </div>
+
+          <div class="page" id="page-blog-manage">
+            <section class="card">
+              <div class="toolbar">
+                <div class="searchbar">
+                  <i class="fas fa-search"></i>
+                  <input type="text" placeholder="Search posts by title" oninput="filterBlogTable(this.value)">
+                </div>
+                <div class="filter-pills">
+                  <button class="pill active" onclick="filterBlog(null, this)">All</button>
+                  <button class="pill" onclick="filterBlog('sports', this)">Sports</button>
+                  <button class="pill" onclick="filterBlog('events', this)">Events</button>
+                  <button class="pill" onclick="filterBlog('academics', this)">Academics</button>
+                  <button class="pill" onclick="filterBlog('student-life', this)">Student Life</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table" id="blog-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Category</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="blog-tbody"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div class="page" id="page-gallery-upload">
+            <div class="upload-layout">
+              <div class="stack">
+                <section class="card">
+                  <div class="section-heading"><h3>Photo Details</h3></div>
+                  <div class="form-group">
+                    <label for="gal-caption" class="required">Caption / Alt Text</label>
+                    <input type="text" id="gal-caption" oninput="updateGalPreview()">
+                  </div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="gal-category" class="required">Category</label>
+                      <select id="gal-category" oninput="updateGalPreview()">
+                        <option value="">Select Category</option>
+                        <option value="school-life">School Life</option>
+                        <option value="events">Events</option>
+                        <option value="facilities">Facilities</option>
+                        <option value="achievements">Achievements</option>
+                        <option value="community">Community</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label for="gal-layout">Layout Hint</label>
+                      <select id="gal-layout" oninput="updateGalPreview()">
+                        <option value="">Auto</option>
+                        <option value="wide">Wide</option>
+                        <option value="portrait">Portrait</option>
+                        <option value="tall">Tall</option>
+                      </select>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="card">
+                  <div class="section-heading"><h3>Upload Photos</h3></div>
+                  <div class="dropzone" id="gal-dropzone" onclick="triggerFileInput('gal-file')" ondragover="event.preventDefault(); setDropState('gal-dropzone', true)" ondragleave="setDropState('gal-dropzone', false)" ondrop="handleGalDrop(event)">
+                    <input type="file" id="gal-file" class="file-input" accept="image/*" multiple onchange="handleGalFile(this)">
+                    <i class="fas fa-images"></i>
+                    <p>Drop gallery images here</p>
+                    <span>Multiple image uploads are supported</span>
+                  </div>
+                  <div class="progress-shell" id="gal-progress">
+                    <div class="progress-track"><div class="progress-bar" id="gal-pbar"></div></div>
+                    <span id="gal-pct">0%</span>
+                  </div>
+                  <div id="gal-multi-preview" class="mini-preview"></div>
+                  <div id="gal-file-list" class="file-pill-list"></div>
+                  <p class="helper" id="gal-file-count">0 files selected</p>
+                </section>
+
+                <section class="card">
+                  <div class="section-heading"><h3>Publishing Settings</h3></div>
+                  <div class="toggle-row">
+                    <div>
+                      <h4>Publish Immediately</h4>
+                      <p>Add these photos to gallery.html on upload.</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="gal-publish" checked onchange="updateGalPreview()"><span></span></label>
+                  </div>
+                  <div class="toggle-row">
+                    <div>
+                      <h4>Sports Cross-Tag</h4>
+                      <p>Mark related sports imagery for later sorting.</p>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="gal-sports"><span></span></label>
+                  </div>
+                  <div class="form-actions">
+                    <button class="btn btn-secondary" type="button" onclick="clearGalForm()">Clear</button>
+                    <button class="btn btn-primary" type="button" onclick="submitGallery()"><i class="fas fa-cloud-arrow-up"></i> Upload Gallery</button>
+                  </div>
+                </section>
+              </div>
+
+              <aside class="preview-card">
+                <div class="section-heading"><h3>Live Preview</h3><span class="status-pill" id="gal-preview-status">Published</span></div>
+                <div class="preview-thumb" id="gal-preview-thumb"><i class="fas fa-image"></i></div>
+                <div class="preview-meta">
+                  <div><span>Caption</span><strong id="gpv-caption">No caption added yet.</strong></div>
+                  <div><span>Category</span><strong id="gpv-cat">Unassigned</strong></div>
+                  <div><span>Layout</span><strong id="gpv-layout">Auto</strong></div>
+                  <div><span>File Count</span><strong id="gpv-count">0 files</strong></div>
+                  <div><span>Status</span><strong id="gpv-status">Published</strong></div>
+                </div>
+              </aside>
+            </div>
+          </div>
+
+          <div class="page" id="page-gallery-manage">
+            <section class="card">
+              <div class="toolbar">
+                <div class="searchbar">
+                  <i class="fas fa-search"></i>
+                  <input type="text" id="gallery-search" placeholder="Search photos by caption" oninput="renderGalleryGrid(currentGalleryFilter, this.value)">
+                </div>
+                <div class="filter-pills">
+                  <button class="pill active" onclick="filterGallery(null, this)">All</button>
+                  <button class="pill" onclick="filterGallery('school-life', this)">School Life</button>
+                  <button class="pill" onclick="filterGallery('events', this)">Events</button>
+                  <button class="pill" onclick="filterGallery('facilities', this)">Facilities</button>
+                  <button class="pill" onclick="filterGallery('achievements', this)">Achievements</button>
+                  <button class="pill" onclick="filterGallery('community', this)">Community</button>
+                </div>
+              </div>
+              <div class="media-grid" id="gallery-grid-container"></div>
+            </section>
+          </div>
+
+          <div class="page" id="page-media-library">
+            <section class="card">
+              <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('all', this)"><i class="fas fa-layer-group"></i> All Media</button>
+                <button class="tab-btn" onclick="switchTab('images', this)"><i class="fas fa-image"></i> Images</button>
+                <button class="tab-btn" onclick="switchTab('videos', this)"><i class="fas fa-video"></i> Videos</button>
+              </div>
+              <div class="tab-content active" id="tab-all"><div class="media-grid" id="lib-grid"></div></div>
+              <div class="tab-content" id="tab-images"><div class="empty-state"><i class="fas fa-image"></i><h3>Image-only library view</h3><p>Static filter stub ready for backend wiring.</p></div></div>
+              <div class="tab-content" id="tab-videos"><div class="empty-state"><i class="fas fa-video"></i><h3>Video-only library view</h3><p>Static filter stub ready for backend wiring.</p></div></div>
+            </section>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <script src="/js/portal.js"></script>
+</body>
+</html>

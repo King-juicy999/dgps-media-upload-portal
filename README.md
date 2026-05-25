@@ -1,1 +1,0 @@
-# dgps-media-upload-portal
