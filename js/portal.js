@@ -75,7 +75,11 @@ function showPage(id) {
   document.getElementById('topbar-title').textContent = PAGE_META[id].title;
   document.getElementById('topbar-sub').textContent = PAGE_META[id].sub;
 
-  if (id === 'blog-manage') loadBlogPosts().then(() => renderBlogTable(blogPosts));
+  if (id === 'blog-manage') {
+    blogPosts.length = 0;
+    document.getElementById('blog-tbody').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;opacity:0.5;">Loading...</td></tr>';
+    loadBlogPosts().then(() => renderBlogTable(blogPosts));
+  }
   if (id === 'gallery-manage') renderGalleryGrid(currentGalleryFilter, document.getElementById('gallery-search').value);
   if (id === 'media-library') renderLibraryGrid();
   if (id === 'dashboard') renderDashboard();
