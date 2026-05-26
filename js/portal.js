@@ -75,7 +75,7 @@ function showPage(id) {
   document.getElementById('topbar-title').textContent = PAGE_META[id].title;
   document.getElementById('topbar-sub').textContent = PAGE_META[id].sub;
 
-  if (id === 'blog-manage') renderBlogTable();
+  if (id === 'blog-manage') loadBlogPosts().then(() => renderBlogTable(blogPosts));
   if (id === 'gallery-manage') renderGalleryGrid(currentGalleryFilter, document.getElementById('gallery-search').value);
   if (id === 'media-library') renderLibraryGrid();
   if (id === 'dashboard') renderDashboard();
@@ -119,7 +119,7 @@ function wakeBackend() {
 }
 
 async function apiGetBlogPosts() {
-  const res = await fetch(API_BASE + '/api/media/posts/', {
+  const res = await fetch(API_BASE + '/api/media/posts/?admin=true', {
     method: 'GET',
     headers: { 'Accept': 'application/json' },
     cache: 'no-store',
