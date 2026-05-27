@@ -36,6 +36,7 @@
 
   <div id="app">
     <div class="app-layout">
+      <div id="sidebar-overlay"></div>
       <aside class="sidebar">
         <div class="sidebar-brand">
           <div class="brand-mark"><i class="fas fa-photo-film"></i></div>
@@ -67,6 +68,17 @@
       </aside>
 
       <main class="main">
+        <header class="mobile-topbar">
+          <div class="brand-row">
+            <div class="brand-mark"><i class="fas fa-photo-film"></i></div>
+            <span class="brand-name">DGPS Portal</span>
+          </div>
+          <button type="button" id="mobile-menu-btn" aria-label="Open menu" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </header>
         <header class="topbar">
           <div>
             <h1 id="topbar-title">Dashboard</h1>
@@ -385,5 +397,46 @@
   <div id="toast-container"></div>
 
   <script src="/js/portal.js"></script>
+  <script>
+(function () {
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+
+  if (!menuBtn || !sidebar || !overlay) return;
+
+  function openMenu() {
+    sidebar.classList.add('open');
+    overlay.classList.add('visible');
+    menuBtn.classList.add('active');
+    menuBtn.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMenu() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('visible');
+    menuBtn.classList.remove('active');
+    menuBtn.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  }
+
+  menuBtn.addEventListener('click', function () {
+    sidebar.classList.contains('open') ? closeMenu() : openMenu();
+  });
+
+  overlay.addEventListener('click', closeMenu);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMenu();
+  });
+
+  sidebar.querySelectorAll('.nav-item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      if (window.innerWidth <= 860) closeMenu();
+    });
+  });
+})();
+  </script>
 </body>
 </html>
