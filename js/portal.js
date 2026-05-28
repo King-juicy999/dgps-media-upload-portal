@@ -34,7 +34,7 @@ async function login() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
 
   try {
-    const res = await fetch(API_BASE + '/api/admins/login/', {
+    const res = await fetch(API_BASE + '/api/media/admins/login/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -79,7 +79,7 @@ async function logout() {
   const token = getAuthToken();
   if (token) {
     try {
-      await fetch(API_BASE + '/api/admins/logout/', {
+      await fetch(API_BASE + '/api/media/admins/logout/', {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -176,7 +176,7 @@ async function submitChangePassword() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
   try {
-    const res = await fetch(API_BASE + '/api/admins/change-password/', {
+    const res = await fetch(API_BASE + '/api/media/admins/change-password/', {
       method: 'POST',
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ current_password: current, new_password: newPw }),
