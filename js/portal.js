@@ -1,33 +1,105 @@
 /* Section 1 - Auth */
-const AUTH_KEY = 'dgps_auth';
-const MOCK_USERNAME = 'admin';
-const MOCK_PASSWORD = 'dgps2026';
+const AUTH_KEY = 'dgps_portal_token';
+const AUTH_ROLE = 'dgps_portal_role';
+const AUTH_EMAIL = 'dgps_portal_email';
 
-function login() {
-  const username = document.getElementById('username');
-  const password = document.getElementById('password');
-  if (username.value.trim() === MOCK_USERNAME && password.value === MOCK_PASSWORD) {
-    sessionStorage.setItem(AUTH_KEY, 'true');
-    showApp();
-    initApp();
-    showToast('Login successful', 'success');
+function getAuthToken() {
+  return localStorage.getItem(AUTH_KEY);
+}
+
+function getAuthHeaders() {
+  const token = getAuthToken();
+  return token ? { 'Authorization': 'Token ' + token, 'Accept': 'application/json' } : { 'Accept': 'application/json' };
+}
+
+async function login() {
+  const emailEl = document.getElementById('login-email');
+  const passwordEl = document.getElementById('login-password');
+  const errorEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-btn');
+
+  const email = emailEl.value.trim().toLowerCase();
+  const password = passwordEl.value;
+
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+
+  if (!email || !password) {
+    errorEl.textContent = 'Please enter your email and password.';
+    errorEl.style.display = 'block';
     return;
   }
-  password.value = '';
-  showToast('Invalid username or password', 'error');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+
+  try {
+    const res = await fetch(API_BASE + '/api/admins/login/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Login failed. Please try again.';
+      errorEl.style.display = 'block';
+      passwordEl.value = '';
+      return;
+    }
+
+    // Store token and session info
+    localStorage.setItem(AUTH_KEY, data.token);
+    localStorage.setItem(AUTH_ROLE, data.role);
+    localStorage.setItem(AUTH_EMAIL, data.email);
+
+    // Show app first
+    showApp();
+    initApp();
+
+    // If must change password, show modal after app loads
+    if (data.must_change_password) {
+      showChangePasswordModal();
+      return;
+    }
+
+    showToast('Welcome back!', 'success');
+
+  } catch (err) {
+    errorEl.textContent = 'Network error. Please check your connection.';
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> Login';
+  }
 }
 
-function logout() {
-  sessionStorage.removeItem(AUTH_KEY);
+async function logout() {
+  const token = getAuthToken();
+  if (token) {
+    try {
+      await fetch(API_BASE + '/api/admins/logout/', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+    } catch (e) {
+      // Proceed with local logout even if request fails
+    }
+  }
+  localStorage.removeItem(AUTH_KEY);
+  localStorage.removeItem(AUTH_ROLE);
+  localStorage.removeItem(AUTH_EMAIL);
   showLogin();
-  document.getElementById('username').value = '';
-  document.getElementById('password').value = '';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').style.display = 'none';
 }
 
-function handleUsernameKey(event) {
+function handleEmailKey(event) {
   if (event.key === 'Enter') {
     event.preventDefault();
-    document.getElementById('password').focus();
+    document.getElementById('login-password').focus();
   }
 }
 
@@ -46,6 +118,88 @@ function showLogin() {
 function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+
+  // Update sidebar user chip with real email
+  const email = localStorage.getItem(AUTH_EMAIL) || 'Admin';
+  const role = localStorage.getItem(AUTH_ROLE) || 'normal_admin';
+  const nameEl = document.querySelector('.user-name');
+  const roleEl = document.querySelector('.user-role');
+  const avatarEl = document.querySelector('.user-avatar');
+  if (nameEl) nameEl.textContent = email.split('@')[0];
+  if (roleEl) roleEl.textContent = role === 'super_admin' ? 'Super Admin' : 'Portal Manager';
+  if (avatarEl) avatarEl.textContent = email.charAt(0).toUpperCase();
+}
+
+function showChangePasswordModal() {
+  const modal = document.getElementById('change-password-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function hideChangePasswordModal() {
+  const modal = document.getElementById('change-password-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function submitChangePassword() {
+  const currentEl = document.getElementById('cp-current');
+  const newEl = document.getElementById('cp-new');
+  const confirmEl = document.getElementById('cp-confirm');
+  const errorEl = document.getElementById('cp-error');
+  const btn = document.getElementById('cp-btn');
+
+  const current = currentEl.value;
+  const newPw = newEl.value;
+  const confirm = confirmEl.value;
+
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+
+  if (!current || !newPw || !confirm) {
+    errorEl.textContent = 'All fields are required.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (newPw.length < 8) {
+    errorEl.textContent = 'New password must be at least 8 characters.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  if (newPw !== confirm) {
+    errorEl.textContent = 'New passwords do not match.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+  try {
+    const res = await fetch(API_BASE + '/api/admins/change-password/', {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: current, new_password: newPw }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Failed to change password.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    hideChangePasswordModal();
+    showToast('Password changed successfully!', 'success');
+
+  } catch (err) {
+    errorEl.textContent = 'Network error. Please try again.';
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-lock"></i> Set New Password';
+  }
 }
 
 /* Section 2 - Navigation */
@@ -125,9 +279,10 @@ function wakeBackend() {
 async function apiGetBlogPosts() {
   const res = await fetch(API_BASE + '/api/media/posts/?admin=true', {
     method: 'GET',
-    headers: { 'Accept': 'application/json' },
+    headers: getAuthHeaders(),
     cache: 'no-store',
   });
+  if (res.status === 401 || res.status === 403) { logout(); return; }
   if (!res.ok) throw new Error('Failed to fetch blog posts');
   return res.json();
 }
@@ -135,18 +290,23 @@ async function apiGetBlogPosts() {
 async function apiGetGalleryPhotos() {
   const res = await fetch(API_BASE + '/api/media/gallery/', {
     method: 'GET',
-    headers: { 'Accept': 'application/json' },
+    headers: getAuthHeaders(),
     cache: 'no-store',
   });
+  if (res.status === 401 || res.status === 403) { logout(); return; }
   if (!res.ok) throw new Error('Failed to fetch gallery photos');
   return res.json();
 }
 
 async function apiUploadBlogPost(formData) {
+  const token = getAuthToken();
+  const headers = token ? { 'Authorization': 'Token ' + token } : {};
   const res = await fetch(API_BASE + '/api/media/posts/', {
     method: 'POST',
+    headers,
     body: formData,
   });
+  if (res.status === 401 || res.status === 403) { logout(); return; }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Upload failed');
@@ -155,10 +315,14 @@ async function apiUploadBlogPost(formData) {
 }
 
 async function apiUploadGalleryPhoto(formData) {
+  const token = getAuthToken();
+  const headers = token ? { 'Authorization': 'Token ' + token } : {};
   const res = await fetch(API_BASE + '/api/media/gallery/', {
     method: 'POST',
+    headers,
     body: formData,
   });
+  if (res.status === 401 || res.status === 403) { logout(); return; }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || 'Upload failed');
@@ -169,7 +333,9 @@ async function apiUploadGalleryPhoto(formData) {
 async function apiDeleteBlogPost(id) {
   const res = await fetch(API_BASE + '/api/media/posts/' + id + '/', {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
+  if (res.status === 401 || res.status === 403) { logout(); return; }
   if (!res.ok) throw new Error('Delete failed');
   return res.json();
 }
@@ -177,7 +343,9 @@ async function apiDeleteBlogPost(id) {
 async function apiDeleteGalleryPhoto(id) {
   const res = await fetch(API_BASE + '/api/media/gallery/' + id + '/', {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
+  if (res.status === 401 || res.status === 403) { logout(); return; }
   if (!res.ok) throw new Error('Delete failed');
   return res.json();
 }
@@ -642,7 +810,7 @@ function renderBreakdown(cats) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem(AUTH_KEY) !== 'true') {
+  if (!localStorage.getItem(AUTH_KEY)) {
     showLogin();
     return;
   }

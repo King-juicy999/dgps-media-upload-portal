@@ -20,15 +20,17 @@
         </div>
         <div class="login-form">
           <div class="form-group">
-            <label for="username" class="required">Username</label>
-            <input type="text" id="username" onkeydown="handleUsernameKey(event)">
+            <label for="login-email" class="required">Email Address</label>
+            <input type="email" id="login-email" placeholder="your@email.com" onkeydown="handleEmailKey(event)" autocomplete="email">
           </div>
           <div class="form-group">
-            <label for="password" class="required">Password</label>
-            <input type="password" id="password" onkeydown="handlePasswordKey(event)">
+            <label for="login-password" class="required">Password</label>
+            <input type="password" id="login-password" placeholder="Enter your password" onkeydown="handlePasswordKey(event)" autocomplete="current-password">
           </div>
-          <button class="btn btn-primary btn-block" type="button" onclick="login()"><i class="fas fa-right-to-bracket"></i> Login</button>
-          <p class="demo-note">Demo credentials: <strong>admin</strong> / <strong>dgps2026</strong></p>
+          <p class="login-error" id="login-error" style="display:none;color:#c0392b;font-size:13px;font-weight:600;text-align:center;padding:10px;background:#fdf0ef;border-radius:8px;"></p>
+          <button class="btn btn-primary btn-block" type="button" id="login-btn" onclick="login()">
+            <i class="fas fa-right-to-bracket"></i> Login
+          </button>
         </div>
       </div>
     </div>
@@ -395,6 +397,31 @@
   </div>
 
   <div id="toast-container"></div>
+
+  <div id="change-password-modal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:24px;">
+    <div style="width:min(100%,440px);background:#fff;border-radius:22px;padding:36px;box-shadow:0 24px 60px rgba(0,0,0,0.2);">
+      <h2 style="font-size:22px;margin-bottom:6px;color:#0d1a0f;">Change Your Password</h2>
+      <p style="color:#5a7060;font-size:14px;margin-bottom:24px;">You must set a new password before continuing.</p>
+      <div style="display:grid;gap:16px;">
+        <div class="form-group">
+          <label for="cp-current" class="required">Current Password</label>
+          <input type="password" id="cp-current" placeholder="Your current password">
+        </div>
+        <div class="form-group">
+          <label for="cp-new" class="required">New Password</label>
+          <input type="password" id="cp-new" placeholder="At least 8 characters">
+        </div>
+        <div class="form-group">
+          <label for="cp-confirm" class="required">Confirm New Password</label>
+          <input type="password" id="cp-confirm" placeholder="Repeat new password">
+        </div>
+        <p class="login-error" id="cp-error" style="display:none;color:#c0392b;font-size:13px;font-weight:600;padding:10px;background:#fdf0ef;border-radius:8px;"></p>
+        <button class="btn btn-primary btn-block" type="button" id="cp-btn" onclick="submitChangePassword()">
+          <i class="fas fa-lock"></i> Set New Password
+        </button>
+      </div>
+    </div>
+  </div>
 
   <script src="/js/portal.js"></script>
   <script>
