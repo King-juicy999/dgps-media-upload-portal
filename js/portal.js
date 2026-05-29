@@ -2,9 +2,10 @@
 const AUTH_KEY = 'dgps_portal_token';
 const AUTH_ROLE = 'dgps_portal_role';
 const AUTH_EMAIL = 'dgps_portal_email';
+const AUTH_STORE = sessionStorage;
 
 function getAuthToken() {
-  return localStorage.getItem(AUTH_KEY);
+  return AUTH_STORE.getItem(AUTH_KEY);
 }
 
 function getAuthHeaders() {
@@ -50,9 +51,9 @@ async function login() {
     }
 
     // Store token and session info
-    localStorage.setItem(AUTH_KEY, data.token);
-    localStorage.setItem(AUTH_ROLE, data.role);
-    localStorage.setItem(AUTH_EMAIL, data.email);
+    AUTH_STORE.setItem(AUTH_KEY, data.token);
+    AUTH_STORE.setItem(AUTH_ROLE, data.role);
+    AUTH_STORE.setItem(AUTH_EMAIL, data.email);
 
     // Show app first
     showApp();
@@ -87,9 +88,9 @@ async function logout() {
       // Proceed with local logout even if request fails
     }
   }
-  localStorage.removeItem(AUTH_KEY);
-  localStorage.removeItem(AUTH_ROLE);
-  localStorage.removeItem(AUTH_EMAIL);
+  AUTH_STORE.removeItem(AUTH_KEY);
+  AUTH_STORE.removeItem(AUTH_ROLE);
+  AUTH_STORE.removeItem(AUTH_EMAIL);
   showLogin();
   document.getElementById('login-email').value = '';
   document.getElementById('login-password').value = '';
@@ -120,8 +121,8 @@ function showApp() {
   document.getElementById('app').style.display = 'block';
 
   // Update sidebar user chip with real email
-  const email = localStorage.getItem(AUTH_EMAIL) || 'Admin';
-  const role = localStorage.getItem(AUTH_ROLE) || 'normal_admin';
+  const email = AUTH_STORE.getItem(AUTH_EMAIL) || 'Admin';
+  const role = AUTH_STORE.getItem(AUTH_ROLE) || 'normal_admin';
   const nameEl = document.querySelector('.user-name');
   const roleEl = document.querySelector('.user-role');
   const avatarEl = document.querySelector('.user-avatar');
@@ -930,6 +931,9 @@ async function loadAdminList() {
               <i class="fas fa-${admin.is_approved ? 'ban' : 'circle-check'}"></i>
               ${admin.is_approved ? 'Suspend' : 'Approve'}
             </button>
+            <button class="btn btn-secondary btn-sm" onclick="resetAdminPassword(${admin.id}, '${admin.email}')" title="Reset password">
+              <i class="fas fa-key"></i>
+            </button>
             <button class="btn btn-danger btn-sm" onclick="deleteAdmin(${admin.id}, '${admin.email}')">
               <i class="fas fa-trash"></i>
             </button>
@@ -973,8 +977,38 @@ async function deleteAdmin(id, email) {
   }
 }
 
+async function resetAdminPassword(id, email) {
+  const newPassword = prompt(`Set a new password for ${email}:\n\nMust be at least 8 characters.`);
+  if (newPassword === null) return;
+  if (newPassword.trim().length < 8) {
+    showToast('Password must be at least 8 characters.', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch(API_BASE + '/api/media/admins/' + id + '/reset-password/', {
+      method: 'PATCH',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_password: newPassword.trim() }),
+    });
+
+    if (res.status === 401 || res.status === 403) { logout(); return; }
+
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.error || 'Failed to reset password.', 'error');
+      return;
+    }
+
+    showToast(`Password reset for ${email}. They will be prompted to change it on next login.`, 'success');
+
+  } catch (err) {
+    showToast('Network error. Could not reset password.', 'error');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  if (!localStorage.getItem(AUTH_KEY)) {
+  if (!AUTH_STORE.getItem(AUTH_KEY)) {
     showLogin();
     return;
   }
