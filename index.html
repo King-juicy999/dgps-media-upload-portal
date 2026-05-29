@@ -25,7 +25,12 @@
           </div>
           <div class="form-group">
             <label for="login-password" class="required">Password</label>
-            <input type="password" id="login-password" placeholder="Enter your password" onkeydown="handlePasswordKey(event)" autocomplete="current-password">
+            <div style="position:relative;">
+              <input type="password" id="login-password" placeholder="Enter your password" onkeydown="handlePasswordKey(event)" autocomplete="current-password" style="padding-right:44px;">
+              <button type="button" onclick="togglePasswordVisibility('login-password', this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#5a7060;font-size:15px;padding:4px;" aria-label="Toggle password visibility">
+                <i class="fas fa-eye"></i>
+              </button>
+            </div>
           </div>
           <p class="login-error" id="login-error" style="display:none;color:#c0392b;font-size:13px;font-weight:600;text-align:center;padding:10px;background:#fdf0ef;border-radius:8px;"></p>
           <button class="btn btn-primary btn-block" type="button" id="login-btn" onclick="login()">
@@ -55,6 +60,7 @@
           <button class="nav-item" data-page="gallery-upload" onclick="showPage('gallery-upload')"><i class="fas fa-images"></i><span>Gallery Upload</span></button>
           <button class="nav-item" data-page="gallery-manage" onclick="showPage('gallery-manage')"><i class="fas fa-grip"></i><span>Gallery Manage</span><span class="nav-badge" id="gallery-badge">0</span></button>
           <button class="nav-item" data-page="media-library" onclick="showPage('media-library')"><i class="fas fa-photo-film"></i><span>Media Library</span></button>
+          <button class="nav-item" id="nav-manage-admins" data-page="manage-admins" onclick="showPage('manage-admins')" style="display:none;"><i class="fas fa-user-shield"></i><span>Manage Admins</span><span class="nav-badge" id="admins-badge">0</span></button>
         </nav>
 
         <div class="sidebar-footer">
@@ -389,6 +395,65 @@
               <div class="tab-content active" id="tab-all"><div class="media-grid" id="lib-grid"></div></div>
               <div class="tab-content" id="tab-images"><div class="empty-state"><i class="fas fa-image"></i><h3>Image-only library view</h3><p>Static filter stub ready for backend wiring.</p></div></div>
               <div class="tab-content" id="tab-videos"><div class="empty-state"><i class="fas fa-video"></i><h3>Video-only library view</h3><p>Static filter stub ready for backend wiring.</p></div></div>
+            </section>
+          </div>
+
+          <div class="page" id="page-manage-admins">
+            <section class="card" style="margin-bottom:24px;">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">Super Admin</p>
+                  <h3>Create New Admin</h3>
+                </div>
+              </div>
+              <p style="color:#5a7060;font-size:14px;margin-bottom:20px;">Enter the email address of the new admin. A password will be auto-generated in the format <strong>DGPS#####</strong> and shown once — copy it before closing.</p>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end;max-width:540px;">
+                <div class="form-group" style="margin:0;">
+                  <label for="new-admin-email" class="required">Admin Email Address</label>
+                  <input type="email" id="new-admin-email" placeholder="admin@example.com">
+                </div>
+                <button class="btn btn-primary" type="button" id="create-admin-btn" onclick="createAdmin()" style="white-space:nowrap;">
+                  <i class="fas fa-user-plus"></i> Create Admin
+                </button>
+              </div>
+              <div id="create-admin-result" style="display:none;margin-top:20px;padding:18px;border-radius:12px;background:#f0faf2;border:1px solid rgba(10,122,36,0.2);">
+                <p style="font-size:13px;font-weight:700;color:#0a7a24;margin-bottom:8px;"><i class="fas fa-circle-check"></i> Admin account created successfully</p>
+                <p style="font-size:13px;color:#5a7060;margin-bottom:10px;">Share this one-time password with the new admin. It will not be shown again.</p>
+                <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid rgba(10,122,36,0.2);border-radius:8px;padding:12px 16px;">
+                  <span style="font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:#0d1a0f;letter-spacing:0.08em;" id="generated-password-display"></span>
+                  <button type="button" onclick="copyGeneratedPassword()" class="btn btn-secondary btn-sm" style="margin-left:auto;">
+                    <i class="fas fa-copy"></i> Copy
+                  </button>
+                </div>
+              </div>
+              <p id="create-admin-error" style="display:none;margin-top:12px;color:#c0392b;font-size:13px;font-weight:600;padding:10px;background:#fdf0ef;border-radius:8px;"></p>
+            </section>
+
+            <section class="card">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">All Admins</p>
+                  <h3>Normal Admin Accounts</h3>
+                </div>
+                <button class="btn btn-secondary btn-sm" type="button" onclick="loadAdminList()">
+                  <i class="fas fa-rotate-right"></i> Refresh
+                </button>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table" id="admins-table">
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th>Created</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admins-tbody">
+                    <tr><td colspan="4" style="text-align:center;padding:2rem;opacity:0.5;">Loading admins...</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </section>
           </div>
         </div>

@@ -128,6 +128,10 @@ function showApp() {
   if (nameEl) nameEl.textContent = email.split('@')[0];
   if (roleEl) roleEl.textContent = role === 'super_admin' ? 'Super Admin' : 'Portal Manager';
   if (avatarEl) avatarEl.textContent = email.charAt(0).toUpperCase();
+
+  // Show Manage Admins nav item only for super_admin
+  const adminNav = document.getElementById('nav-manage-admins');
+  if (adminNav) adminNav.style.display = role === 'super_admin' ? 'flex' : 'none';
 }
 
 function showChangePasswordModal() {
@@ -209,7 +213,8 @@ const PAGE_META = {
   'blog-manage': { title: 'Manage Posts', sub: 'Edit, delete, or feature posts' },
   'gallery-upload': { title: 'Upload Gallery Photo', sub: 'Add new photos to the gallery' },
   'gallery-manage': { title: 'Manage Gallery', sub: 'Browse and manage gallery photos' },
-  'media-library': { title: 'Media Library', sub: 'All uploaded files' }
+  'media-library': { title: 'Media Library', sub: 'All uploaded files' },
+  'manage-admins': { title: 'Manage Admins', sub: 'Create and control admin access' }
 };
 
 let activePage = 'dashboard';
@@ -236,6 +241,7 @@ function showPage(id) {
   }
   if (id === 'gallery-manage') renderGalleryGrid(currentGalleryFilter, document.getElementById('gallery-search').value);
   if (id === 'media-library') renderLibraryGrid();
+  if (id === 'manage-admins') loadAdminList();
   if (id === 'dashboard') renderDashboard();
 }
 
@@ -769,6 +775,17 @@ async function loadGalleryPhotos() {
   }
 }
 
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+  const icon = btn.querySelector('i');
+  if (icon) {
+    icon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+  }
+}
+
 function triggerFileInput(id) { document.getElementById(id).click(); }
 function setDropState(id, state) { document.getElementById(id).classList.toggle('drag-over', state); }
 function valueOf(id) { return document.getElementById(id).value.trim(); }
@@ -807,6 +824,153 @@ function renderDashboard() {
 function renderBreakdown(cats) {
   const counts = cats.reduce((acc, cat) => ({ ...acc, [cat]: (acc[cat] || 0) + 1 }), {});
   return Object.entries(counts).map(([cat, count]) => `<div class="breakdown-item"><span>${CAT_LABELS[cat]}</span><strong>${count}</strong></div>`).join('');
+}
+
+/* Section 11 - Manage Admins (Super Admin only) */
+
+let generatedPasswordValue = '';
+
+async function createAdmin() {
+  const emailEl = document.getElementById('new-admin-email');
+  const resultEl = document.getElementById('create-admin-result');
+  const errorEl = document.getElementById('create-admin-error');
+  const btn = document.getElementById('create-admin-btn');
+  const email = emailEl.value.trim().toLowerCase();
+
+  resultEl.style.display = 'none';
+  errorEl.style.display = 'none';
+  errorEl.textContent = '';
+
+  if (!email) {
+    errorEl.textContent = 'Please enter an email address.';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+
+  try {
+    const res = await fetch(API_BASE + '/api/media/admins/create/', {
+      method: 'POST',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || 'Failed to create admin.';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    generatedPasswordValue = data.generated_password;
+    document.getElementById('generated-password-display').textContent = data.generated_password;
+    resultEl.style.display = 'block';
+    emailEl.value = '';
+    showToast('Admin account created!', 'success');
+    loadAdminList();
+
+  } catch (err) {
+    errorEl.textContent = 'Network error. Please try again.';
+    errorEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Admin';
+  }
+}
+
+function copyGeneratedPassword() {
+  if (!generatedPasswordValue) return;
+  navigator.clipboard.writeText(generatedPasswordValue).then(() => {
+    showToast('Password copied to clipboard!', 'success');
+  }).catch(() => {
+    showToast('Could not copy — please copy it manually.', 'error');
+  });
+}
+
+async function loadAdminList() {
+  const tbody = document.getElementById('admins-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;opacity:0.5;">Loading...</td></tr>';
+
+  try {
+    const res = await fetch(API_BASE + '/api/media/admins/list/', {
+      method: 'GET',
+      headers: getAuthHeaders(),
+      cache: 'no-store',
+    });
+
+    if (res.status === 401 || res.status === 403) { logout(); return; }
+    if (!res.ok) throw new Error('Failed to fetch admins');
+
+    const data = await res.json();
+    const admins = Array.isArray(data.data) ? data.data : [];
+
+    document.getElementById('admins-badge').textContent = admins.length;
+
+    if (!admins.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;opacity:0.5;">No admin accounts yet. Create one above.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = admins.map((admin) => `
+      <tr>
+        <td><div class="title-cell"><i class="fas fa-user" style="color:var(--muted);font-size:13px;"></i>${admin.email}</div></td>
+        <td>
+          <span class="badge ${admin.is_approved ? 'badge-published' : 'badge-draft'}">
+            ${admin.is_approved ? '<i class="fas fa-circle-check"></i> Approved' : '<i class="fas fa-clock"></i> Pending'}
+          </span>
+        </td>
+        <td>${new Date(admin.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn btn-secondary btn-sm" onclick="toggleAdminApproval(${admin.id}, ${admin.is_approved})" title="${admin.is_approved ? 'Suspend' : 'Approve'}">
+              <i class="fas fa-${admin.is_approved ? 'ban' : 'circle-check'}"></i>
+              ${admin.is_approved ? 'Suspend' : 'Approve'}
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="deleteAdmin(${admin.id}, '${admin.email}')">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:#c0392b;">Failed to load admins. Try refreshing.</td></tr>';
+  }
+}
+
+async function toggleAdminApproval(id, currentlyApproved) {
+  try {
+    const res = await fetch(API_BASE + '/api/media/admins/' + id + '/approve/', {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to update');
+    const data = await res.json();
+    showToast(data.message || 'Admin status updated.', 'success');
+    loadAdminList();
+  } catch (err) {
+    showToast('Could not update admin status. Try again.', 'error');
+  }
+}
+
+async function deleteAdmin(id, email) {
+  if (!confirm(`Delete admin account for ${email}? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(API_BASE + '/api/media/admins/' + id + '/delete/', {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Failed to delete');
+    showToast('Admin deleted.', 'success');
+    loadAdminList();
+  } catch (err) {
+    showToast('Could not delete admin. Try again.', 'error');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
