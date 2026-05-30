@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DGPS Media Upload Portal</title>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="/css/portal.css">
 </head>
@@ -53,6 +53,15 @@
           </div>
         </div>
 
+        <div class="admin-identity">
+          <p class="ai-hello">Welcome back</p>
+          <p class="ai-name" id="sidebar-admin-name">Admin</p>
+          <div class="ai-role-row">
+            <div class="ai-dot"></div>
+            <span class="ai-role" id="sidebar-admin-role">Portal Manager</span>
+          </div>
+        </div>
+
         <nav class="sidebar-nav">
           <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')"><i class="fas fa-chart-line"></i><span>Dashboard</span></button>
           <button class="nav-item" data-page="blog-upload" onclick="showPage('blog-upload')"><i class="fas fa-pen-to-square"></i><span>Blog Upload</span></button>
@@ -96,6 +105,15 @@
 
         <div class="page-wrap">
           <div class="page" id="page-dashboard">
+            <div class="dashboard-hero">
+              <div class="dh-inner">
+                <div class="dh-chip"><i class="fas fa-circle-check"></i> All systems running</div>
+                <p class="dh-greeting" id="dash-greeting">Good day 👋</p>
+                <p class="dh-sub">Here's today's content snapshot for your portal.</p>
+                <p class="dh-date" id="dash-date"></p>
+              </div>
+            </div>
+
             <section class="stats-row">
               <article class="stat-card">
                 <div class="stat-head"><span>Total Blog Posts</span><i class="fas fa-newspaper"></i></div>

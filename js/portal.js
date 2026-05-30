@@ -144,6 +144,25 @@ function showApp() {
   const adminNav = document.getElementById('nav-manage-admins');
   if (adminNav) adminNav.style.display = role === 'super_admin' ? 'flex' : 'none';
 
+  // Populate sidebar admin identity card
+  const sidebarName = document.getElementById('sidebar-admin-name');
+  const sidebarRole = document.getElementById('sidebar-admin-role');
+  if (sidebarName) sidebarName.textContent = email.split('@')[0];
+  if (sidebarRole) sidebarRole.textContent = role === 'super_admin' ? 'Super Admin · Online' : 'Portal Manager · Online';
+
+  // Populate dashboard greeting and date
+  const greetingEl = document.getElementById('dash-greeting');
+  const dateEl = document.getElementById('dash-date');
+  if (greetingEl) {
+    const hour = new Date().getHours();
+    const timeOfDay = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+    const shortName = email.split('@')[0];
+    greetingEl.textContent = `Good ${timeOfDay}, ${shortName} 👋`;
+  }
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() + ' · ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  }
+
   showPage('dashboard');
 }
 
