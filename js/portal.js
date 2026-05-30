@@ -728,7 +728,6 @@ function showToast(msg, type = 'info') {
 }
 
 function initApp() {
-  wakeBackend();
   updateBlogPreview();
   updateGalPreview();
   loadBlogPosts();
@@ -1020,6 +1019,9 @@ async function resetAdminPassword(id, email) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Always ping backend immediately on page load to wake Render free tier
+  fetch(API_BASE + '/api/media/admins/login/', { method: 'HEAD' }).catch(() => {});
+
   if (!AUTH_STORE.getItem(AUTH_KEY)) {
     showLogin();
     return;
