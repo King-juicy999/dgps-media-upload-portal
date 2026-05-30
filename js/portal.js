@@ -35,11 +35,19 @@ async function login() {
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
 
   try {
-    const res = await fetch(API_BASE + '/api/media/admins/login/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    const controller = new AbortController();
+    const loginTimeout = setTimeout(() => controller.abort(), 15000);
+    let res;
+    try {
+      res = await fetch(API_BASE + '/api/media/admins/login/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(loginTimeout);
+    }
 
     const data = await res.json();
 
@@ -57,7 +65,7 @@ async function login() {
 
     // Show app first
     showApp();
-    initApp();
+    setTimeout(initApp, 100);
 
     // If must change password, show modal after app loads
     if (data.must_change_password) {
@@ -68,7 +76,9 @@ async function login() {
     showToast('Welcome back!', 'success');
 
   } catch (err) {
-    errorEl.textContent = 'Network error. Please check your connection.';
+    errorEl.textContent = err.name === 'AbortError'
+      ? 'Login is taking too long. The server may be starting up — please try again.'
+      : 'Network error. Please check your connection.';
     errorEl.style.display = 'block';
   } finally {
     btn.disabled = false;
@@ -133,6 +143,8 @@ function showApp() {
   // Show Manage Admins nav item only for super_admin
   const adminNav = document.getElementById('nav-manage-admins');
   if (adminNav) adminNav.style.display = role === 'super_admin' ? 'flex' : 'none';
+
+  showPage('dashboard');
 }
 
 function showChangePasswordModal() {
@@ -745,7 +757,7 @@ async function loadBlogPosts() {
     renderBlogTable(blogPosts);
     renderLibraryGrid();
     updateDashboardStats();
-    if (activePage === 'dashboard') renderDashboard();
+    renderDashboard();
   } catch (e) {
     console.error('loadBlogPosts error:', e);
   }
@@ -770,7 +782,7 @@ async function loadGalleryPhotos() {
     document.getElementById('gallery-badge').textContent = galleryPhotos.length;
     renderLibraryGrid();
     updateDashboardStats();
-    if (activePage === 'dashboard') renderDashboard();
+    renderDashboard();
   } catch (e) {
     console.error('loadGalleryPhotos error:', e);
   }
