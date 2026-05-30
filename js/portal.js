@@ -160,7 +160,24 @@ function showApp() {
     greetingEl.textContent = `Good ${timeOfDay}, ${shortName} 👋`;
   }
   if (dateEl) {
-    dateEl.textContent = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase() + ' · ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    function updateDashClock() {
+      const now = new Date();
+      const datePart = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+      const timePart = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      dateEl.innerHTML = `${datePart} · <span id="dash-clock-time" style="transition:opacity 0.4s ease;">${timePart}</span>`;
+    }
+    updateDashClock();
+    setInterval(() => {
+      const clockEl = document.getElementById('dash-clock-time');
+      if (clockEl) {
+        clockEl.style.opacity = '0';
+        setTimeout(() => {
+          const now = new Date();
+          clockEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+          clockEl.style.opacity = '1';
+        }, 400);
+      }
+    }, 60000);
   }
 
   showPage('dashboard');
