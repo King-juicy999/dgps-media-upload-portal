@@ -506,6 +506,103 @@
     </div>
   </div>
 
+  <!-- Blog Edit Modal -->
+  <div id="edit-modal" style="display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:24px;">
+    <div style="width:min(100%,620px);background:#fff;border-radius:22px;padding:36px;box-shadow:0 24px 60px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+        <h2 style="font-size:22px;color:#0d1a0f;font-family:'Plus Jakarta Sans',sans-serif;">Edit Blog Post</h2>
+        <button type="button" onclick="closeEditModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:#5a7060;padding:4px;">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+
+      <input type="hidden" id="edit-post-id">
+
+      <div style="display:grid;gap:18px;">
+        <div class="form-group">
+          <label for="edit-title" class="required">Post Title</label>
+          <input type="text" id="edit-title" placeholder="Post title">
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div class="form-group">
+            <label for="edit-category" class="required">Category</label>
+            <select id="edit-category">
+              <option value="">Select Category</option>
+              <option value="sports">Sports</option>
+              <option value="events">Events</option>
+              <option value="academics">Academics</option>
+              <option value="student-life">Student Life</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="edit-media-type" class="required">Media Type</label>
+            <select id="edit-media-type">
+              <option value="">Select Type</option>
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-caption" class="required">Caption / Description</label>
+          <textarea id="edit-caption" style="min-height:90px;"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Replace Media <span style="font-weight:400;color:#5a7060;font-size:12px;">(optional — leave blank to keep existing)</span></label>
+          <div class="dropzone" id="edit-dropzone"
+            onclick="triggerFileInput('edit-file')"
+            ondragover="event.preventDefault(); setDropState('edit-dropzone', true)"
+            ondragleave="setDropState('edit-dropzone', false)"
+            ondrop="handleEditDrop(event)"
+            style="padding:1.5rem;">
+            <input type="file" id="edit-file" class="file-input" accept="image/*,video/*" onchange="handleEditFile(this)">
+            <i class="fas fa-cloud-arrow-up"></i>
+            <p style="margin:6px 0 0;">Drop new media here or click to browse</p>
+          </div>
+          <div id="edit-media-preview" style="margin-top:12px;display:none;">
+            <p style="font-size:12px;color:#5a7060;margin-bottom:6px;">New media selected:</p>
+            <img id="edit-preview-img" src="" alt="" style="max-height:140px;border-radius:10px;object-fit:cover;display:none;">
+            <video id="edit-preview-video" src="" muted autoplay loop playsinline style="max-height:140px;border-radius:10px;object-fit:cover;display:none;"></video>
+            <p id="edit-preview-name" style="font-size:12px;color:#0a7a24;font-weight:600;margin-top:6px;"></p>
+          </div>
+          <div class="progress-shell" id="edit-progress" style="display:none;margin-top:10px;">
+            <div class="progress-track"><div class="progress-bar" id="edit-pbar"></div></div>
+            <span id="edit-pct">0%</span>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#f8fdf9;border-radius:12px;border:1px solid rgba(10,122,36,0.12);">
+            <div>
+              <p style="font-size:14px;font-weight:600;color:#0d1a0f;margin:0;">Published</p>
+              <p style="font-size:12px;color:#5a7060;margin:0;">Visible on blog</p>
+            </div>
+            <label class="switch"><input type="checkbox" id="edit-publish"><span></span></label>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:#f8fdf9;border-radius:12px;border:1px solid rgba(10,122,36,0.12);">
+            <div>
+              <p style="font-size:14px;font-weight:600;color:#0d1a0f;margin:0;">Featured</p>
+              <p style="font-size:12px;color:#5a7060;margin:0;">Pin at top of blog</p>
+            </div>
+            <label class="switch"><input type="checkbox" id="edit-featured"><span></span></label>
+          </div>
+        </div>
+
+        <p id="edit-error" style="display:none;color:#c0392b;font-size:13px;font-weight:600;padding:10px;background:#fdf0ef;border-radius:8px;"></p>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end;padding-top:8px;">
+          <button class="btn btn-secondary" type="button" onclick="closeEditModal()">Cancel</button>
+          <button class="btn btn-primary" type="button" id="edit-save-btn" onclick="saveEditPost()">
+            <i class="fas fa-floppy-disk"></i> Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="/js/portal.js"></script>
   <script>
 (function () {

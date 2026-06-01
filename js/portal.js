@@ -632,7 +632,7 @@ function renderBlogTable(posts = null) {
       <td><span class="type-pill"><i class="fas fa-${post.type === 'video' ? 'video' : 'image'}"></i>${capitalize(post.type)}</span></td>
       <td><span class="badge badge-${post.status}">${capitalize(post.status)}</span></td>
       <td>${post.date}</td>
-      <td><div class="row-actions"><button class="btn btn-secondary btn-sm" onclick="showToast('Edit flow is a UI stub for now.', 'info')"><i class="fas fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="deletePost(${post.id})"><i class="fas fa-trash"></i></button></div></td>
+      <td><div class="row-actions"><button class="btn btn-secondary btn-sm" onclick="editPost(${post.id})"><i class="fas fa-pen"></i></button><button class="btn btn-danger btn-sm" onclick="deletePost(${post.id})"><i class="fas fa-trash"></i></button></div></td>
     </tr>
   `).join('');
 }
@@ -667,6 +667,221 @@ async function deletePost(id) {
   } catch (e) {
     showToast('Could not delete post. Try again.', 'error');
   }
+}
+
+// ─── BLOG EDIT MODAL ────────────────────────────────────────────────
+
+let editSelectedFile = null;
+
+function editPost(id) {
+  const post = (window.allBlogPosts || []).find((p) => String(p.id) === String(id));
+  if (!post) {
+    showToast('Could not load post data. Please refresh.', 'error');
+    return;
+  }
+  openEditModal(post);
+}
+
+function openEditModal(post) {
+  editSelectedFile = null;
+
+  document.getElementById('edit-post-id').value = post.id;
+  document.getElementById('edit-title').value = post.title || '';
+  document.getElementById('edit-category').value = (post.category || '').toLowerCase().replace(/\s+/g, '-');
+  document.getElementById('edit-media-type').value = post.media_type || '';
+  document.getElementById('edit-caption').value = post.caption || '';
+  document.getElementById('edit-publish').checked = post.is_published !== false;
+  document.getElementById('edit-featured').checked = post.is_featured === true;
+
+  document.getElementById('edit-media-preview').style.display = 'none';
+  document.getElementById('edit-preview-img').style.display = 'none';
+  document.getElementById('edit-preview-img').src = '';
+  document.getElementById('edit-preview-video').style.display = 'none';
+  document.getElementById('edit-preview-video').src = '';
+  document.getElementById('edit-preview-name').textContent = '';
+  document.getElementById('edit-progress').style.display = 'none';
+  document.getElementById('edit-pbar').style.width = '0%';
+  document.getElementById('edit-pct').textContent = '0%';
+  document.getElementById('edit-error').style.display = 'none';
+  document.getElementById('edit-file').value = '';
+
+  const modal = document.getElementById('edit-modal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+  document.body.style.overflow = '';
+  editSelectedFile = null;
+}
+
+function handleEditFile(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  editSelectedFile = file;
+
+  const previewWrap = document.getElementById('edit-media-preview');
+  const previewImg = document.getElementById('edit-preview-img');
+  const previewVid = document.getElementById('edit-preview-video');
+  const previewName = document.getElementById('edit-preview-name');
+
+  previewImg.style.display = 'none';
+  previewVid.style.display = 'none';
+  previewImg.src = '';
+  previewVid.src = '';
+
+  const url = URL.createObjectURL(file);
+  if (file.type.startsWith('image/')) {
+    previewImg.src = url;
+    previewImg.style.display = 'block';
+    document.getElementById('edit-media-type').value = 'image';
+  } else if (file.type.startsWith('video/')) {
+    previewVid.src = url;
+    previewVid.style.display = 'block';
+    document.getElementById('edit-media-type').value = 'video';
+  }
+
+  previewName.textContent = file.name;
+  previewWrap.style.display = 'block';
+  setDropState('edit-dropzone', false);
+}
+
+function handleEditDrop(event) {
+  event.preventDefault();
+  setDropState('edit-dropzone', false);
+  const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if (!file) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  const input = document.getElementById('edit-file');
+  input.files = dt.files;
+  handleEditFile(input);
+}
+
+async function saveEditPost() {
+  const id = document.getElementById('edit-post-id').value;
+  const title = document.getElementById('edit-title').value.trim();
+  const category = document.getElementById('edit-category').value;
+  const mediaType = document.getElementById('edit-media-type').value;
+  const caption = document.getElementById('edit-caption').value.trim();
+  const isPublished = document.getElementById('edit-publish').checked;
+  const isFeatured = document.getElementById('edit-featured').checked;
+  const errorEl = document.getElementById('edit-error');
+
+  errorEl.style.display = 'none';
+
+  if (!title) { showEditError('Post title is required.'); return; }
+  if (!category) { showEditError('Please select a category.'); return; }
+  if (!mediaType) { showEditError('Please select a media type.'); return; }
+  if (!caption) { showEditError('Caption is required.'); return; }
+
+  const saveBtn = document.getElementById('edit-save-btn');
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+  try {
+    let mediaUrl = null;
+
+    if (editSelectedFile) {
+      mediaUrl = await uploadEditFile(editSelectedFile);
+      if (!mediaUrl) {
+        showEditError('File upload failed. Please try again.');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Changes';
+        return;
+      }
+    }
+
+    const payload = {
+      title,
+      category,
+      media_type: mediaType,
+      caption,
+      is_published: isPublished,
+      is_featured: isFeatured,
+    };
+    if (mediaUrl) payload.media_url = mediaUrl;
+
+    const res = await fetch(API_BASE + '/api/media/posts/' + id + '/', {
+      method: 'PATCH',
+      headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 401 || res.status === 403) { logout(); return; }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      showEditError(err.error || err.detail || err.message || `Save failed (${res.status}). Please try again.`);
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Changes';
+      return;
+    }
+
+    showToast('Post updated successfully!', 'success');
+    closeEditModal();
+    loadBlogPosts();
+    renderDashboard();
+
+  } catch (err) {
+    showEditError('Network error. Check your connection and try again.');
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Changes';
+  }
+}
+
+async function uploadEditFile(file) {
+  const progressShell = document.getElementById('edit-progress');
+  const pbar = document.getElementById('edit-pbar');
+  const pct = document.getElementById('edit-pct');
+
+  progressShell.style.display = 'flex';
+  pbar.style.width = '0%';
+  pct.textContent = '0%';
+
+  return new Promise((resolve) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API_BASE + '/api/media/upload/', true);
+    xhr.setRequestHeader('Accept', 'application/json');
+    if (token) xhr.setRequestHeader('Authorization', 'Token ' + token);
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const p = Math.round((e.loaded / e.total) * 100);
+        pbar.style.width = p + '%';
+        pct.textContent = p + '%';
+      }
+    });
+
+    xhr.onload = () => {
+      pbar.style.width = '100%';
+      pct.textContent = '100%';
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          resolve(data.url || data.media_url || data.file_url || null);
+        } catch {
+          resolve(null);
+        }
+      } else {
+        resolve(null);
+      }
+    };
+
+    xhr.onerror = () => resolve(null);
+    xhr.send(formData);
+  });
+}
+
+function showEditError(msg) {
+  const el = document.getElementById('edit-error');
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 
 /* Section 8 - Gallery Manage */
@@ -774,6 +989,7 @@ async function loadBlogPosts() {
   try {
     const result = await apiGetBlogPosts();
     const posts = Array.isArray(result.data) ? result.data : [];
+    window.allBlogPosts = posts;
     // Replace mock array entirely with live data
     blogPosts.length = 0;
     posts.forEach((p) => {
@@ -1057,6 +1273,13 @@ async function resetAdminPassword(id, email) {
 document.addEventListener('DOMContentLoaded', () => {
   // Always ping backend immediately on page load to wake Render free tier
   fetch(API_BASE + '/api/media/admins/login/', { method: 'HEAD' }).catch(() => {});
+
+  const editModal = document.getElementById('edit-modal');
+  if (editModal) {
+    editModal.addEventListener('click', function (e) {
+      if (e.target === this) closeEditModal();
+    });
+  }
 
   if (!AUTH_STORE.getItem(AUTH_KEY)) {
     showLogin();
