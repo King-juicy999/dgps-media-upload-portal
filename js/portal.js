@@ -652,20 +652,35 @@ function filterBlog(cat, btn) {
 }
 
 async function deletePost(id) {
+  if (!confirm('Are you sure you want to delete this post? This cannot be undone.')) return;
+
+  const token = localStorage.getItem('dgps_token') ||
+                localStorage.getItem('token') ||
+                localStorage.getItem('authToken') || '';
+
   try {
-    await apiDeleteBlogPost(id);
-    const idx = blogPosts.findIndex((p) => p.id === id);
-    if (idx > -1) blogPosts.splice(idx, 1);
-    renderBlogTable(
-      !currentBlogFilter || currentBlogFilter === 'all' ? blogPosts : blogPosts.filter((p) => p.cat === currentBlogFilter)
-    );
-    document.getElementById('blog-badge').textContent = blogPosts.length;
-    updateDashboardStats();
-    if (activePage === 'dashboard') renderDashboard();
-    if (activePage === 'media-library') renderLibraryGrid();
-    showToast('Post deleted', 'success');
-  } catch (e) {
-    showToast('Could not delete post. Try again.', 'error');
+    const res = await fetch(`https://dgps-website.onrender.com/api/media/posts/${id}/`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (res.ok) {
+      showToast('Post deleted successfully.', 'success');
+      if (typeof loadBlogPosts === 'function') loadBlogPosts();
+      if (typeof loadDashboard === 'function') loadDashboard();
+    } else {
+      let msg = `Delete failed (${res.status}).`;
+      try {
+        const err = await res.json();
+        msg = err.detail || err.message || msg;
+      } catch (_) {}
+      showToast(msg, 'error');
+    }
+  } catch (err) {
+    showToast('Network error. Check your connection and try again.', 'error');
   }
 }
 
