@@ -1285,6 +1285,273 @@ async function resetAdminPassword(id, email) {
   }
 }
 
+// ─── BATCH UPLOAD ─────────────────────────────────────────────
+
+let batchFiles = [];
+let batchModeActive = false;
+let currentBatchMode = 'same';
+
+function toggleBatchMode() {
+  batchModeActive = !batchModeActive;
+  const single = document.getElementById('blog-single-upload');
+  const batch  = document.getElementById('blog-batch-upload');
+  const btn    = document.getElementById('btb-switch');
+  const label  = document.getElementById('btb-label');
+  const desc   = document.getElementById('btb-desc');
+  if (batchModeActive) {
+    single.style.display = 'none';
+    batch.style.display  = 'block';
+    btn.innerHTML   = '<i class="fas fa-pen-to-square"></i> Switch to Single Upload';
+    label.textContent = 'Batch Upload';
+    desc.textContent  = 'Upload and configure multiple posts at once';
+  } else {
+    single.style.display = 'block';
+    batch.style.display  = 'none';
+    btn.innerHTML   = '<i class="fas fa-layer-group"></i> Switch to Batch Upload';
+    label.textContent = 'Single Upload';
+    desc.textContent  = 'Fill in details and upload one post at a time';
+  }
+}
+
+function setBatchMode(mode) {
+  currentBatchMode = mode;
+  document.getElementById('mode-btn-same').classList.toggle('active', mode === 'same');
+  document.getElementById('mode-btn-mix').classList.toggle('active', mode === 'mix');
+}
+
+function handleBatchDrop(e) {
+  e.preventDefault();
+  setDropState('batch-dropzone', false);
+  handleBatchFiles(e.dataTransfer.files);
+}
+
+function handleBatchFiles(fileList) {
+  Array.from(fileList).forEach(file => {
+    batchFiles.push({
+      file,
+      name: file.name,
+      size: formatFileSize(file.size),
+      type: file.type.startsWith('video/') ? 'video' : 'image',
+      objectUrl: URL.createObjectURL(file),
+      custom: false,
+      title: '',
+      category: '',
+      caption: ''
+    });
+  });
+  renderBatchQueue();
+  updateBatchSummary();
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderBatchQueue() {
+  const queue = document.getElementById('batch-queue');
+  const countPill = document.getElementById('batch-file-count');
+  countPill.textContent = batchFiles.length + ' file' + (batchFiles.length !== 1 ? 's' : '');
+  queue.innerHTML = '';
+  batchFiles.forEach((f, i) => {
+    const card = document.createElement('div');
+    card.className = 'batch-file-card' + (f.custom ? ' customised' : '');
+    card.dataset.index = i;
+
+    const thumbHtml = f.type === 'video'
+      ? `<div class="batch-file-thumb video"><i class="fas fa-play"></i></div>`
+      : `<div class="batch-file-thumb"><img src="${f.objectUrl}" alt=""></div>`;
+
+    const badgeHtml = f.custom
+      ? `<span class="file-badge-custom">Custom</span>`
+      : `<span class="file-badge-shared">Shared</span>`;
+
+    const actionIcon = f.custom ? 'fa-chevron-up' : 'fa-pen';
+    const actionTitle = f.custom ? 'Collapse' : 'Customise this file';
+
+    card.innerHTML = `
+      <div class="batch-file-card-head">
+        ${thumbHtml}
+        <div class="batch-file-info">
+          <div class="batch-file-name">${f.name}</div>
+          <div class="batch-file-size">${f.size} · ${f.type.charAt(0).toUpperCase() + f.type.slice(1)}</div>
+        </div>
+        ${badgeHtml}
+        <div style="display:flex;gap:6px;">
+          <button class="batch-icon-btn" title="${actionTitle}"
+            onclick="customiseBatchFile(${i})">
+            <i class="fas ${actionIcon}"></i>
+          </button>
+          <button class="batch-icon-btn danger" title="Remove"
+            onclick="removeBatchFile(${i})">
+            <i class="fas fa-xmark"></i>
+          </button>
+        </div>
+      </div>
+      ${f.custom ? `
+      <div class="batch-custom-fields">
+        <div>
+          <label>Title (this file only)</label>
+          <input type="text" value="${f.title}"
+            placeholder="Override title..."
+            oninput="batchFiles[${i}].title = this.value">
+        </div>
+        <div>
+          <label>Category override</label>
+          <select onchange="batchFiles[${i}].category = this.value">
+            <option value="">Use shared</option>
+            <option value="events" ${f.category==='events'?'selected':''}>Events</option>
+            <option value="sports" ${f.category==='sports'?'selected':''}>Sports</option>
+            <option value="academics" ${f.category==='academics'?'selected':''}>Academics</option>
+            <option value="student-life" ${f.category==='student-life'?'selected':''}>Student Life</option>
+          </select>
+        </div>
+        <div class="full-span">
+          <label>Caption override</label>
+          <input type="text" value="${f.caption}"
+            placeholder="Override caption..."
+            oninput="batchFiles[${i}].caption = this.value">
+        </div>
+      </div>` : ''}
+      <div class="batch-file-progress" id="batch-prog-${i}" style="display:none;">
+        <span style="font-size:11px;color:#0a7a24;font-weight:600;white-space:nowrap;" id="batch-prog-label-${i}">Uploading...</span>
+        <div class="batch-progress-track">
+          <div class="batch-progress-bar" id="batch-pbar-${i}"></div>
+        </div>
+        <span style="font-size:11px;color:#0a7a24;font-weight:700;" id="batch-pct-${i}">0%</span>
+      </div>`;
+    queue.appendChild(card);
+  });
+}
+
+function customiseBatchFile(index) {
+  batchFiles[index].custom = !batchFiles[index].custom;
+  renderBatchQueue();
+  updateBatchSummary();
+}
+
+function removeBatchFile(index) {
+  URL.revokeObjectURL(batchFiles[index].objectUrl);
+  batchFiles.splice(index, 1);
+  renderBatchQueue();
+  updateBatchSummary();
+}
+
+function clearBatchQueue() {
+  batchFiles.forEach(f => URL.revokeObjectURL(f.objectUrl));
+  batchFiles = [];
+  renderBatchQueue();
+  updateBatchSummary();
+}
+
+function updateBatchSummary() {
+  const total   = batchFiles.length;
+  const custom  = batchFiles.filter(f => f.custom).length;
+  const shared  = total - custom;
+  document.getElementById('bs-total').textContent  = total;
+  document.getElementById('bs-shared').textContent = shared;
+  document.getElementById('bs-custom').textContent = custom;
+  document.getElementById('bs-ready').textContent  = total + ' / ' + total;
+}
+
+async function submitBatchUpload() {
+  if (batchFiles.length === 0) {
+    showToast('No files in queue.', 'error'); return;
+  }
+  const sharedCategory = document.getElementById('batch-category').value;
+  const sharedType     = document.getElementById('batch-media-type').value;
+  const sharedTitle    = document.getElementById('batch-title').value.trim();
+  const publish        = document.getElementById('batch-publish').checked;
+  const featured       = document.getElementById('batch-featured').checked;
+
+  if (!sharedCategory || !sharedType || !sharedTitle) {
+    showToast('Please fill in all shared fields before uploading.', 'error'); return;
+  }
+
+  const btn = document.getElementById('batch-submit-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+
+  let successCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < batchFiles.length; i++) {
+    const f = batchFiles[i];
+    const progRow   = document.getElementById(`batch-prog-${i}`);
+    const progBar   = document.getElementById(`batch-pbar-${i}`);
+    const progPct   = document.getElementById(`batch-pct-${i}`);
+    const progLabel = document.getElementById(`batch-prog-label-${i}`);
+
+    progRow.style.display = 'flex';
+    progBar.style.width   = '30%';
+    progPct.textContent   = '30%';
+
+    const formData = new FormData();
+    formData.append('media_file', f.file);
+    formData.append('title',      f.custom && f.title    ? f.title    : sharedTitle);
+    formData.append('category',   f.custom && f.category ? f.category : sharedCategory);
+    formData.append('caption',    f.custom && f.caption  ? f.caption  : sharedTitle);
+    formData.append('media_type', sharedType);
+    formData.append('is_published', publish ? 'true' : 'false');
+    formData.append('is_featured',  featured ? 'true' : 'false');
+
+    try {
+      const token = getAuthToken();
+      const headers = token ? { Authorization: 'Token ' + token } : {};
+      const res = await fetch(API_BASE + '/api/media/posts/', {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      if (res.status === 401 || res.status === 403) { logout(); return; }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Upload failed');
+      }
+      const result = await res.json();
+      const p = result.data;
+      blogPosts.unshift({
+        id: p.id,
+        title: p.title,
+        cat: p.category,
+        type: p.media_type,
+        status: p.is_published ? 'published' : 'draft',
+        featured: p.is_featured,
+        date: new Date(p.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+        media_url: p.media_url,
+      });
+      progBar.style.width = '100%';
+      progPct.textContent = '100%';
+      progLabel.innerHTML = '<i class="fas fa-circle-check"></i> Done';
+      progLabel.style.color = '#0a7a24';
+      successCount++;
+    } catch (err) {
+      progBar.style.background = '#c0392b';
+      progBar.style.width = '100%';
+      progLabel.innerHTML = '<i class="fas fa-circle-xmark"></i> Failed';
+      progLabel.style.color = '#c0392b';
+      progPct.textContent = '';
+      failCount++;
+    }
+  }
+
+  document.getElementById('blog-badge').textContent = blogPosts.length;
+  renderBlogTable(blogPosts);
+  updateDashboardStats();
+  if (activePage === 'dashboard') renderDashboard();
+  if (activePage === 'media-library') renderLibraryGrid();
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Publish All';
+
+  if (failCount === 0) {
+    showToast(`${successCount} post${successCount > 1 ? 's' : ''} uploaded successfully!`, 'success');
+    clearBatchQueue();
+  } else {
+    showToast(`${successCount} succeeded, ${failCount} failed. Check the queue.`, 'error');
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Always ping backend immediately on page load to wake Render free tier
   fetch(API_BASE + '/api/media/admins/login/', { method: 'HEAD' }).catch(() => {});

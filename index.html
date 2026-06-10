@@ -178,7 +178,16 @@
           </div>
 
           <div class="page" id="page-blog-upload">
-            <div class="upload-layout">
+            <div class="batch-toggle-bar">
+              <div class="btb-left">
+                <span class="btb-label" id="btb-label">Single Upload</span>
+                <span class="btb-desc" id="btb-desc">Fill in details and upload one post at a time</span>
+              </div>
+              <button class="btb-switch" id="btb-switch" type="button" onclick="toggleBatchMode()">
+                <i class="fas fa-layer-group"></i> Switch to Batch Upload
+              </button>
+            </div>
+            <div class="upload-layout" id="blog-single-upload">
               <div class="stack">
                 <section class="card">
                   <div class="section-heading"><h3>Post Details</h3></div>
@@ -260,6 +269,125 @@
                   <div><span>Status</span><strong id="pv-status">Draft</strong></div>
                 </div>
               </aside>
+            </div>
+
+            <div id="blog-batch-upload" style="display:none;">
+              <div class="batch-upload-layout">
+                <div class="batch-main">
+                  <section class="card">
+                    <div class="section-heading"><h3>Upload Mode</h3></div>
+                    <div class="mode-btn-grid">
+                      <button class="mode-btn active" id="mode-btn-same" type="button" onclick="setBatchMode('same')">
+                        <div class="mode-icon"><i class="fas fa-copy"></i></div>
+                        <div class="mode-label">Same settings for all</div>
+                        <div class="mode-desc">One set of fields applies to every file</div>
+                      </button>
+                      <button class="mode-btn" id="mode-btn-mix" type="button" onclick="setBatchMode('mix')">
+                        <div class="mode-icon"><i class="fas fa-sliders"></i></div>
+                        <div class="mode-label">Mix — customise per file</div>
+                        <div class="mode-desc">Override settings on individual files</div>
+                      </button>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <div class="section-heading"><h3>Shared Fields</h3></div>
+                    <div class="shared-fields-box">
+                      <div class="shared-fields-label"><i class="fas fa-layer-group"></i> Defaults for all files</div>
+                      <div class="form-grid">
+                        <div class="form-group">
+                          <label for="batch-category" class="required">Category</label>
+                          <select id="batch-category">
+                            <option value="">Select Category</option>
+                            <option value="events">Events</option>
+                            <option value="sports">Sports</option>
+                            <option value="academics">Academics</option>
+                            <option value="student-life">Student Life</option>
+                          </select>
+                        </div>
+                        <div class="form-group">
+                          <label for="batch-media-type" class="required">Media Type</label>
+                          <select id="batch-media-type">
+                            <option value="">Select Type</option>
+                            <option value="image">Image</option>
+                            <option value="video">Video</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="form-group">
+                        <label for="batch-title" class="required">Title / Caption</label>
+                        <input type="text" id="batch-title" placeholder="e.g. Sports Day 2026">
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <div class="section-heading"><h3>Upload Media</h3></div>
+                    <div class="dropzone" id="batch-dropzone"
+                      onclick="triggerFileInput('batch-file')"
+                      ondragover="event.preventDefault(); setDropState('batch-dropzone', true)"
+                      ondragleave="setDropState('batch-dropzone', false)"
+                      ondrop="handleBatchDrop(event)">
+                      <input type="file" id="batch-file" class="file-input"
+                        accept="image/*,video/*" multiple onchange="handleBatchFiles(this.files)">
+                      <i class="fas fa-cloud-arrow-up"></i>
+                      <p>Drop all your files here at once</p>
+                      <span>Images and videos · Multiple files allowed</span>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <div class="batch-queue-header">
+                      <span class="batch-queue-label">File Queue</span>
+                      <span class="batch-count-pill" id="batch-file-count">0 files</span>
+                    </div>
+                    <div id="batch-queue"></div>
+                    <div class="form-actions">
+                      <button class="btn btn-secondary" type="button" onclick="clearBatchQueue()">Clear Queue</button>
+                      <button class="btn btn-primary" type="button" id="batch-submit-btn" onclick="submitBatchUpload()">
+                        <i class="fas fa-cloud-arrow-up"></i> Publish All
+                      </button>
+                    </div>
+                  </section>
+                </div>
+
+                <div class="batch-side">
+                  <section class="card">
+                    <div class="section-heading"><h3>Batch Summary</h3></div>
+                    <div id="batch-summary">
+                      <div class="batch-summary-row"><span>Total files</span><strong id="bs-total">0</strong></div>
+                      <div class="batch-summary-row"><span>Using shared settings</span><strong id="bs-shared">0</strong></div>
+                      <div class="batch-summary-row"><span>Customised</span><strong id="bs-custom">0</strong></div>
+                      <div class="batch-summary-row"><span>Ready to publish</span><strong id="bs-ready" style="color:#0a7a24;">0 / 0</strong></div>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <div class="section-heading"><h3>Publishing Settings</h3></div>
+                    <div class="toggle-row">
+                      <div>
+                        <h4>Publish Immediately</h4>
+                        <p>Push all posts live once uploaded.</p>
+                      </div>
+                      <label class="switch"><input type="checkbox" id="batch-publish" checked><span></span></label>
+                    </div>
+                    <div class="toggle-row">
+                      <div>
+                        <h4>Featured Posts</h4>
+                        <p>Highlight these stories at the top of the blog.</p>
+                      </div>
+                      <label class="switch"><input type="checkbox" id="batch-featured"><span></span></label>
+                    </div>
+                  </section>
+
+                  <section class="card">
+                    <div class="section-heading"><h3>How It Works</h3></div>
+                    <div class="batch-tip-box">
+                      <strong>Shared settings</strong> apply to all files by default. Click the <strong>pen icon</strong> on any file to customise it individually. Customised files keep their own settings even if you change the shared fields above.
+                    </div>
+                  </section>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -602,6 +730,94 @@
       </div>
     </div>
   </div>
+
+  <style>
+.batch-toggle-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff; border: 1px solid #e4eae5; border-radius: 14px;
+  padding: 14px 20px; margin-bottom: 20px;
+}
+.btb-label { font-size: 14px; font-weight: 700; color: #0d1a0f; display: block; }
+.btb-desc { font-size: 12px; color: #5a7060; }
+.btb-switch { display: flex; align-items: center; gap: 8px; padding: 9px 16px;
+  background: #0a7a24; color: #fff; border: none; border-radius: 9px;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  white-space: nowrap; transition: background 0.15s; }
+.btb-switch:hover { background: #065a19; }
+.batch-upload-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; align-items: start; }
+.mode-btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode-btn { padding: 14px 12px; border-radius: 12px; border: 1.5px solid #e4eae5;
+  background: #fff; cursor: pointer; text-align: center; transition: all 0.18s; }
+.mode-btn.active { border-color: #0a7a24; background: #f0faf2; }
+.mode-btn .mode-icon { font-size: 22px; color: #b0c4b5; margin-bottom: 6px; }
+.mode-btn.active .mode-icon { color: #0a7a24; }
+.mode-btn .mode-label { font-size: 13px; font-weight: 700; color: #5a7060; }
+.mode-btn.active .mode-label { color: #0a7a24; }
+.mode-btn .mode-desc { font-size: 11px; color: #8ca090; margin-top: 3px; }
+.shared-fields-box { background: #f0faf2; border: 1.5px dashed #7ec891;
+  border-radius: 12px; padding: 16px; }
+.shared-fields-label { font-size: 11px; font-weight: 700; color: #0a7a24;
+  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 6px; }
+.batch-file-card { border: 1px solid #e4eae5; border-radius: 12px;
+  background: #fff; margin-bottom: 10px; overflow: hidden; transition: border-color 0.18s; }
+.batch-file-card.customised { border-color: #0a7a24; background: #fafffe; }
+.batch-file-card-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.batch-file-thumb { width: 40px; height: 40px; border-radius: 8px;
+  background: #e8f5ea; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; overflow: hidden; }
+.batch-file-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+.batch-file-thumb.video { background: #0d1a0f; color: #fff; font-size: 15px; }
+.batch-file-info { flex: 1; min-width: 0; }
+.batch-file-name { font-size: 12px; font-weight: 700; color: #0d1a0f;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.batch-file-size { font-size: 11px; color: #8ca090; }
+.file-badge-shared { font-size: 10px; font-weight: 700; border-radius: 20px;
+  padding: 2px 9px; background: #e8f5ea; color: #0a7a24; flex-shrink: 0; }
+.file-badge-custom { font-size: 10px; font-weight: 700; border-radius: 20px;
+  padding: 2px 9px; background: #fff3cd; color: #856404;
+  border: 1px solid #ffc107; flex-shrink: 0; }
+.batch-icon-btn { width: 28px; height: 28px; border: 1px solid #e4eae5;
+  border-radius: 7px; background: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #5a7060; font-size: 13px; transition: all 0.15s; flex-shrink: 0; }
+.batch-icon-btn:hover { border-color: #0a7a24; color: #0a7a24; background: #f0faf2; }
+.batch-icon-btn.danger:hover { border-color: #c0392b; color: #c0392b; background: #fdf0ef; }
+.batch-custom-fields { padding: 0 14px 12px; border-top: 1px solid #f0f4f1;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+.batch-custom-fields label { font-size: 10px; font-weight: 700; color: #5a7060;
+  display: block; margin-bottom: 3px; }
+.batch-custom-fields input, .batch-custom-fields select {
+  width: 100%; border: 1px solid #ccd9ce; border-radius: 7px;
+  padding: 6px 9px; font-size: 11px; color: #0d1a0f;
+  background: #fff; font-family: inherit; box-sizing: border-box; }
+.batch-custom-fields .full-span { grid-column: 1 / -1; }
+.batch-file-progress { display: flex; align-items: center; gap: 10px;
+  padding: 6px 14px 10px; }
+.batch-progress-track { flex: 1; height: 4px; background: #e4eae5;
+  border-radius: 4px; overflow: hidden; }
+.batch-progress-bar { height: 100%; background: #0a7a24;
+  border-radius: 4px; transition: width 0.3s; width: 0%; }
+.batch-queue-header { display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 10px; }
+.batch-queue-label { font-size: 11px; font-weight: 700; color: #5a7060;
+  letter-spacing: 0.06em; text-transform: uppercase; }
+.batch-count-pill { background: #0a7a24; color: #fff; font-size: 10px;
+  font-weight: 700; border-radius: 20px; padding: 2px 9px; }
+.batch-summary-row { display: flex; justify-content: space-between;
+  align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f4f1;
+  font-size: 13px; }
+.batch-summary-row:last-child { border-bottom: none; }
+.batch-summary-row span { color: #5a7060; }
+.batch-summary-row strong { color: #0d1a0f; font-weight: 700; }
+.batch-tip-box { background: #f0faf2; border: 1px solid #c0dfc6;
+  border-radius: 10px; padding: 12px 14px; font-size: 12px;
+  color: #3a6b42; line-height: 1.6; }
+.batch-tip-box strong { color: #0a7a24; }
+@media (max-width: 900px) {
+  .batch-upload-layout { grid-template-columns: 1fr; }
+}
+  </style>
 
   <script src="/js/portal.js"></script>
   <script>
