@@ -1498,10 +1498,10 @@ async function submitBatchUpload() {
     try {
       const token = getAuthToken();
       const headers = token ? { Authorization: 'Token ' + token } : {};
-      const res = await fetch(
-        `${window.DGPS_CONFIG.BACKEND_URL}/api/media/posts/`,
-        { method: 'POST', headers, body: formData }
-      );
+    const res = await fetch(
+      `${API_BASE}/api/media/posts/`,
+      { method: 'POST', headers, body: formData }
+    );
       if (res.status === 401 || res.status === 403) { logout(); return; }
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
